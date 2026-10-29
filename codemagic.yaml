@@ -1,4 +1,60 @@
 workflows:
+  ios-appetize-preview:
+    name: "Bloop Pop iOS Simulator (Appetize)"
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - appetize
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Install CocoaPods
+        script: |
+          export RBENV_VERSION=3.4.8
+          cd ios
+          pod install
+
+      - name: Build iOS Simulator app
+        script: |
+          export RBENV_VERSION=3.4.8
+          flutter build ios --simulator --debug --no-codesign
+          test -d build/ios/iphonesimulator/Runner.app
+          cd build/ios/iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
+
+    artifacts:
+      - build/ios/iphonesimulator/Runner.zip
+
+    publishing:
+      scripts:
+        - name: Upload simulator build to Appetize
+          script: |
+            set -euo pipefail
+            test -n "${APPETIZE_API_TOKEN:-}" || { echo "APPETIZE_API_TOKEN is missing"; exit 1; }
+            zip_path="build/ios/iphonesimulator/Runner.zip"
+
+            if [ -n "${APPETIZE_PUBLIC_KEY:-}" ]; then
+              api_url="https://api.appetize.io/v1/apps/$APPETIZE_PUBLIC_KEY"
+            else
+              api_url="https://api.appetize.io/v1/apps"
+            fi
+
+            response=$(curl --silent --show-error --fail \
+              --request POST "$api_url" \
+              --header "X-API-KEY: $APPETIZE_API_TOKEN" \
+              --form "file=@$zip_path" \
+              --form "platform=ios" \
+              --form "note=Codemagic iOS Simulator build")
+            app_key=$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["publicKey"])')
+            echo "Appetize app: https://appetize.io/app/$app_key"
+
   ios-testflight:
     name: "Bloop Pop iOS"
     max_build_duration: 60
@@ -12,8 +68,6 @@ workflows:
       flutter: stable
       # Using 'latest' ensures compatibility with current Xcode tools while supporting iOS 14+ / Apple Duo
       xcode: latest
-      # Use the Ruby installation that has CocoaPods available on the Codemagic image.
-      ruby: 3.4.8
       cocoapods: default
       vars:
         BUNDLE_ID: com.rayo.blooppop
@@ -33,6 +87,7 @@ workflows:
 
       - name: Install CocoaPods
         script: |
+          export RBENV_VERSION=3.4.8
           cd ios
           pod install
 
