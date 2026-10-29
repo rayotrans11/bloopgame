@@ -8,6 +8,10 @@ import 'ui/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Disable runtime fetching via HTTP to prevent startup white screen lag / network stalls
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
@@ -57,10 +61,7 @@ class _BloopPopAppState extends State<BloopPopApp> {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: GameColors.bgDarkPlayfield,
-        fontFamily: GoogleFonts.fredoka().fontFamily,
-        textTheme: GoogleFonts.fredokaTextTheme(
-          ThemeData.dark().textTheme,
-        ),
+        fontFamily: 'Fredoka',
       ),
       home: ResponsiveGameContainer(
         child: HomeScreen(player: _player),

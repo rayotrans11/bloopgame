@@ -71,6 +71,9 @@ flutter:
     - family: BiscuitGlitch
       fonts:
         - asset: assets/fonts/BiscuitGlitch.ttf
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
