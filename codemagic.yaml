@@ -46,84 +46,11 @@ workflows:
             set -euo pipefail
             test -n "${APPETIZE_API_TOKEN:-}" || { echo "APPETIZE_API_TOKEN is missing"; exit 1; }
             zip_path="build/ios/iphonesimulator/Runner.zip"
-
-            if [ -n "${APPETIZE_PUBLIC_KEY:-}" ]; then
-              api_url="https://api.appetize.io/v1/apps/$APPETIZE_PUBLIC_KEY"
-            else
-              api_url="https://api.appetize.io/v1/apps"
-            fi
-
             response=$(curl --silent --show-error --fail \
-              --request POST "$api_url" \
-              --header "X-API-KEY: $APPETIZE_API_TOKEN" \
+              --request POST "https://api.appetize.io/v1/apps" \
+              --user "$APPETIZE_API_TOKEN:" \
               --form "file=@$zip_path" \
-              --form "platform=ios" \
-              --form "note=Codemagic iOS Simulator build")
-            app_key=$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["publicKey"])')
-            echo "Appetize app: https://appetize.io/app/$app_key"
-
-  ios-testflight:
-    name: "Bloop Pop iOS"
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-
-    # App Store Connect integration name configured in Codemagic Team Settings
-    integrations:
-      app_store_connect: codeteam
-
-    environment:
-      flutter: stable
-      # Using 'latest' ensures compatibility with current Xcode tools while supporting iOS 14+ / Apple Duo
-      xcode: latest
-      cocoapods: default
-      vars:
-        BUNDLE_ID: com.rayo.blooppop
-      ios_signing:
-        # Profile & certificate names saved under Codemagic Team settings > Code signing identities
-        provisioning_profiles:
-          - BloopProf
-        certificates:
-          - Rayo
-
-    scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Run Flutter tests
-        script: flutter test
-
-      - name: Install CocoaPods
-        script: |
-          export RBENV_VERSION=3.4.8
-          cd ios
-          pod install
-
-      - name: Set up code signing
-        script: xcode-project use-profiles
-
-      - name: Build signed Flutter IPA
-        script: |
-          BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 2))
-          flutter build ipa --release \
-            --build-name=1.0.0 \
-            --build-number="$BUILD_NUMBER" \
-            --export-options-plist="$HOME/export_options.plist"
-
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
-      - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      email:
-        recipients:
-          - rayo.trans09@gmail.com
-        notify:
-          success: true
-          failure: true
-
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        # Set submit_to_app_store: true when ready for App Store review
-
+              --form "platform=ios")
+            app_url=$(printf '%s' "$response" | jq -r '.publicURL // empty')
+            test -n "$app_url" || { echo "Appetize upload returned no publicURL"; exit 1; }
+            echo "Appetize app: $app_url"
