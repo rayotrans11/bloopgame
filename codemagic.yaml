@@ -6,7 +6,7 @@ workflows:
 
     # App Store Connect integration name configured in Codemagic Team Settings
     integrations:
-      app_store_connect: codeteam
+      app_store_connect: ABDOULAYE CAMARA
 
     environment:
       flutter: stable
