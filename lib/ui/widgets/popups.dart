@@ -40,35 +40,38 @@ class GameDialogWrapper extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Fredoka',
-                fontWeight: FontWeight.w900,
-                fontSize: 24,
-                color: Colors.white,
-                shadows: [
-                  Shadow(color: Colors.black54, offset: Offset(0, 2), blurRadius: 4),
-                ],
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(color: Colors.black54, offset: Offset(0, 2), blurRadius: 4),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Content
-            content,
-            const SizedBox(height: 20),
+              // Content
+              content,
+              const SizedBox(height: 20),
 
-            // Actions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: actions.map((a) => Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: a)).toList(),
-            ),
-          ],
+              // Actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: actions.map((a) => Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: a)).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );
