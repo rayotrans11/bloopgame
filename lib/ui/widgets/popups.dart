@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/ads_service.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../core/game_audio.dart';
 import '../../data/player_state.dart';
 import 'game_icons.dart';
 import 'hud_pills.dart';
@@ -716,19 +717,32 @@ class Popups {
                 title: const Text('Sound FX', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontWeight: FontWeight.bold)),
                 value: player.sound,
                 activeThumbColor: const Color(0xFF00E5FF),
-                onChanged: (_) => player.toggleSound(),
+                onChanged: (_) {
+                  player.toggleSound();
+                  GameAudio.instance.play(GameSound.uiTap);
+                  GameAudio.instance.haptic(GameHaptic.selection);
+                },
               ),
               SwitchListTile(
                 title: const Text('Music', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontWeight: FontWeight.bold)),
                 value: player.music,
                 activeThumbColor: const Color(0xFF00E5FF),
-                onChanged: (_) => player.toggleMusic(),
+                onChanged: (_) {
+                  player.toggleMusic();
+                  GameAudio.instance.play(GameSound.uiTap);
+                  GameAudio.instance.haptic(GameHaptic.selection);
+                },
               ),
               SwitchListTile(
                 title: const Text('Haptics', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontWeight: FontWeight.bold)),
                 value: player.haptics,
                 activeThumbColor: const Color(0xFF00E5FF),
-                onChanged: (_) => player.toggleHaptics(),
+                onChanged: (_) {
+                  player.toggleHaptics();
+                  if (player.haptics) {
+                    GameAudio.instance.haptic(GameHaptic.selection);
+                  }
+                },
               ),
               const SizedBox(height: 8),
               // Privacy Policy Link

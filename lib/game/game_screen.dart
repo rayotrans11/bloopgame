@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../core/ads_service.dart';
+import '../core/game_audio.dart';
 import '../core/layout.dart';
 import '../core/theme.dart';
 import '../data/levels_data.dart';
@@ -85,18 +86,23 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       baseBalls: levelDef.balls,
       descendEachTurn: true,
       onBlockHit: () {
-        // Haptic feedback could be triggered here
+        GameAudio.instance.play(GameSound.blockHit);
+        GameAudio.instance.haptic(GameHaptic.light);
       },
       onBlockDestroyed: () {
-        // Block destroyed
+        GameAudio.instance.play(GameSound.blockPop);
+        GameAudio.instance.haptic(GameHaptic.medium);
       },
       onOrbTriggered: () {
-        // Orb triggered
+        GameAudio.instance.play(GameSound.orb);
+        GameAudio.instance.haptic(GameHaptic.selection);
       },
     );
   }
 
   void _onWin() {
+    GameAudio.instance.play(GameSound.win);
+    GameAudio.instance.haptic(GameHaptic.success);
     const earned = 0.04;
     widget.player.completeLevel(widget.levelId, earned);
     Popups.showWin(context, widget.levelId, earned, () {
@@ -112,6 +118,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   void _onLose() {
+    GameAudio.instance.play(GameSound.lose);
+    GameAudio.instance.haptic(GameHaptic.error);
     Popups.showLose(context, () {
       if (widget.player.consumeHeartForGame()) {
         Navigator.of(context).pushReplacement(
@@ -128,6 +136,32 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }, () {
       Navigator.of(context).pop();
     });
+  }
+
+  void _fire(GameEngine engine) {
+    if (engine.phase != Phase.aiming) return;
+    engine.fire();
+    GameAudio.instance.play(GameSound.launch);
+    GameAudio.instance.haptic(GameHaptic.light);
+  }
+
+  void _activatePowerup(
+    BuildContext context,
+    GameEngine engine,
+    String id,
+    bool Function() activate,
+  ) {
+    if (!widget.player.usePowerup(id)) {
+      _watchAdForPowerup(context, id);
+      return;
+    }
+
+    if (activate()) {
+      GameAudio.instance.play(GameSound.powerUp);
+      GameAudio.instance.haptic(GameHaptic.selection);
+    } else {
+      widget.player.addPowerup(id, 1);
+    }
   }
 
   @override
@@ -156,7 +190,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     behavior: HitTestBehavior.opaque,
                     onPanStart: (d) => engine.setAim(d.localPosition),
                     onPanUpdate: (d) => engine.setAim(d.localPosition),
-                    onPanEnd: (_) => engine.fire(),
+                    onPanEnd: (_) => _fire(engine),
                     onPanCancel: engine.cancelAim,
                     child: CustomPaint(
                       size: size,
@@ -320,7 +354,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               fontSize: 22,
                               surfaceColor: GameColors.recoveryIndigo,
                               shadowColor: GameColors.recoveryDark,
-                              onTap: () => engine.recall(),
+                              onTap: () {
+                                engine.recall();
+                                GameAudio.instance.play(GameSound.uiTap);
+                                GameAudio.instance.haptic(GameHaptic.selection);
+                              },
                             ),
                           )
                         // Idle / Aiming: 5 Power-Up Buttons (as observed in Screenshot B!)
@@ -331,61 +369,31 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                 context,
                                 iconType: 'pu_smash',
                                 count: widget.player.powerups['smash'] ?? 0,
-                                onTap: () {
-                                  if (widget.player.usePowerup('smash')) {
-                                    engine.triggerSmash();
-                                  } else {
-                                    _watchAdForPowerup(context, 'smash');
-                                  }
-                                },
+                                onTap: () => _activatePowerup(context, engine, 'smash', engine.triggerSmash),
                               ),
                               _powerupBtn(
                                 context,
                                 iconType: 'pu_balls',
                                 count: widget.player.powerups['balls'] ?? 0,
-                                onTap: () {
-                                  if (widget.player.usePowerup('balls')) {
-                                    engine.triggerMoreBalls();
-                                  } else {
-                                    _watchAdForPowerup(context, 'balls');
-                                  }
-                                },
+                                onTap: () => _activatePowerup(context, engine, 'balls', engine.triggerMoreBalls),
                               ),
                               _powerupBtn(
                                 context,
                                 iconType: 'pu_row',
                                 count: widget.player.powerups['rowBlast'] ?? 0,
-                                onTap: () {
-                                  if (widget.player.usePowerup('rowBlast')) {
-                                    engine.triggerRowBlast();
-                                  } else {
-                                    _watchAdForPowerup(context, 'rowBlast');
-                                  }
-                                },
+                                onTap: () => _activatePowerup(context, engine, 'rowBlast', engine.triggerRowBlast),
                               ),
                               _powerupBtn(
                                 context,
                                 iconType: 'pu_fire',
                                 count: widget.player.powerups['fire'] ?? 0,
-                                onTap: () {
-                                  if (widget.player.usePowerup('fire')) {
-                                    engine.triggerFireBall();
-                                  } else {
-                                    _watchAdForPowerup(context, 'fire');
-                                  }
-                                },
+                                onTap: () => _activatePowerup(context, engine, 'fire', engine.triggerFireBall),
                               ),
                               _powerupBtn(
                                 context,
                                 iconType: 'pu_stone',
                                 count: widget.player.powerups['stone'] ?? 0,
-                                onTap: () {
-                                  if (widget.player.usePowerup('stone')) {
-                                    engine.triggerStoneBreaker();
-                                  } else {
-                                    _watchAdForPowerup(context, 'stone');
-                                  }
-                                },
+                                onTap: () => _activatePowerup(context, engine, 'stone', engine.triggerStoneBreaker),
                               ),
                             ],
                           ),

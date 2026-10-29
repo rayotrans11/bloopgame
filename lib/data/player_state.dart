@@ -32,9 +32,10 @@ class PlayerState extends ChangeNotifier {
   bool haptics = true;
 
   Timer? _regenTimer;
+  late final Future<void> ready;
 
   PlayerState() {
-    _init();
+    ready = _init();
   }
 
   Future<void> _init() async {
