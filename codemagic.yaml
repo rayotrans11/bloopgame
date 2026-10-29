@@ -12,8 +12,8 @@ workflows:
       flutter: stable
       # Using 'latest' ensures compatibility with current Xcode tools while supporting iOS 14+ / Apple Duo
       xcode: latest
-      # CocoaPods 1.16.2 currently crashes under the Ruby 4.0.5 used by the latest image.
-      ruby: 3.3.6
+      # Use the Ruby installation that has CocoaPods available on the Codemagic image.
+      ruby: 3.4.8
       cocoapods: default
       vars:
         BUNDLE_ID: com.rayo.blooppop
