@@ -25,9 +25,16 @@ workflows:
         script: |
           export RBENV_VERSION=3.4.8
           flutter build ios --simulator --debug --no-codesign
-          test -d build/ios/iphonesimulator/Runner.app
+          app_path="build/ios/iphonesimulator/Runner.app"
+          test -d "$app_path"
+          platform=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app_path/Info.plist")
+          echo "Built app platform: $platform"
+          if [ "$platform" != "iPhoneSimulator" ]; then
+            echo "Expected an iPhoneSimulator build; refusing to upload a device build."
+            exit 1
+          fi
           cd build/ios/iphonesimulator
-          ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
+          zip -qr Runner.zip Runner.app
 
     artifacts:
       - build/ios/iphonesimulator/Runner.zip
