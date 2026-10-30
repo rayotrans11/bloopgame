@@ -1,5 +1,5 @@
 {
-  "project": "builde",
+  "project": "blop",
   "platform": "ios",
   "github": {
     "owner": "rayotrans11",
@@ -13,7 +13,7 @@
     "bundleId": "com.rayo.blooppop"
   },
   "flutter": {
-    "version": "builder dev flutter",
+    "version": "builder ios build",
     "watch": {}
   },
   "reactNative": {},
