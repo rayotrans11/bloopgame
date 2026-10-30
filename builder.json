@@ -1,0 +1,22 @@
+{
+  "project": "builde",
+  "platform": "ios",
+  "github": {
+    "owner": "rayotrans11",
+    "repo": "bloopgame"
+  },
+  "provider": "github",
+  "codemagic": {},
+  "bitrise": {},
+  "ios": {
+    "path": "ios",
+    "bundleId": "com.rayo.blooppop"
+  },
+  "flutter": {
+    "version": "builder dev flutter",
+    "watch": {}
+  },
+  "reactNative": {},
+  "kmp": {},
+  "mobai": {}
+}
