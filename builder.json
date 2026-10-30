@@ -10,10 +10,10 @@
   "bitrise": {},
   "ios": {
     "path": "ios",
-    "bundleId": "com.rayo.blooppop"
+    "bundleId": "com.rayo.blooppop",
+    "configuration": "Release"
   },
   "flutter": {
-    "version": "builder ios build",
     "watch": {}
   },
   "reactNative": {},
