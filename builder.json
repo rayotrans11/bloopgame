@@ -13,7 +13,6 @@
     "bundleId": "com.rayo.blooppop"
   },
   "flutter": {
-    "version": "builder ios build",
     "watch": {}
   },
   "reactNative": {},
