@@ -301,7 +301,7 @@ class GameEngine {
     Offset closest;
     bool inside = false;
 
-    if (blk.kind == BlockKind.square) {
+    if (blk.kind == BlockKind.square || blk.kind == BlockKind.boss) {
       closest = Offset(
         p.dx.clamp(rect.left, rect.right),
         p.dy.clamp(rect.top, rect.bottom),
