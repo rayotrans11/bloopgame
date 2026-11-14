@@ -1,5 +1,5 @@
 class GameFormat {
-  static String currency(num amount, {String symbol = '\$'}) {
+  static String currency(num amount, {String symbol = ''}) {
     if (amount >= 1000000) {
       final v = (amount / 1000000).toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
       return '$symbol${v}M';

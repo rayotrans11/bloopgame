@@ -242,8 +242,8 @@ class Popups {
 
   static void showWin(BuildContext context, int level, num cashEarned, VoidCallback onNext, {PlayerState? player}) {
     final cashStr = cashEarned is double || cashEarned.toDouble() != cashEarned.toInt().toDouble()
-        ? '\$${cashEarned.toStringAsFixed(2)}'
-        : '\$$cashEarned';
+        ? cashEarned.toStringAsFixed(2)
+        : '$cashEarned';
 
     showDialog(
       barrierDismissible: false,
@@ -310,7 +310,7 @@ class Popups {
                 },
               );
             },
-            child: const OutlinedButtonText('2x Cash (Ad)', fontSize: 14),
+            child: const OutlinedButtonText('2x Bonus (Ad)', fontSize: 14),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -431,7 +431,7 @@ class Popups {
             ),
             const SizedBox(height: 14),
             const Text(
-              'You found:\n• \$500 Cash\n• 15 Gems\n• +1 Smash Power-up!',
+              'You found:\n• 500 Coins\n• 15 Gems\n• +1 Smash Power-up!',
               textAlign: TextAlign.center,
               style: TextStyle(fontFamily: 'Fredoka', fontSize: 16, color: Colors.yellowAccent, height: 1.4),
             ),

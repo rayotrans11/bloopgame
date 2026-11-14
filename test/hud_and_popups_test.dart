@@ -22,9 +22,9 @@ void main() {
       ),
     );
 
-    // Cash has text '$1k' but no plus icon next to it
-    expect(find.text('\$1k'), findsOneWidget);
-    expect(find.text('\$20'), findsOneWidget);
+    // Cash has text '1k' (no dollar sign) and no plus icon next to it
+    expect(find.text('1k'), findsOneWidget);
+    expect(find.text('20'), findsOneWidget);
     expect(find.text('MAX'), findsOneWidget);
 
     // Tap gems plus

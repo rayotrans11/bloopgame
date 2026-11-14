@@ -93,16 +93,10 @@ class GameIconPainter extends CustomPainter {
       lightGreen,
     );
 
-    // White circle & dollar symbol
+    // White circle & coin star emblem (no dollar symbol)
     canvas.drawCircle(const Offset(50, 43), 11, Paint()..color = Colors.white.withValues(alpha: 0.85));
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: '\$',
-        style: TextStyle(color: Color(0xFF2E7D32), fontSize: 16, fontWeight: FontWeight.w900),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(50 - tp.width / 2, 43 - tp.height / 2));
+    canvas.drawCircle(const Offset(50, 43), 7, Paint()..color = const Color(0xFF2E7D32));
+    canvas.drawCircle(const Offset(50, 43), 4, Paint()..color = const Color(0xFF81C784));
   }
 
   void _drawGem(Canvas canvas) {
