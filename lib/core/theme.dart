@@ -22,23 +22,33 @@ class GameColors {
   static const Color recoveryDark = Color(0xFF333A9D);
   static const Color floorLine = Colors.white;
 
-  // Blocks
+  // Cartoon Neon Blocks
   static const List<Color> blockColors = [
-    Color(0xFFFF2D8D), // Pink
-    Color(0xFFFF7A0E), // Orange
-    Color(0xFFFDBD10), // Yellow
-    Color(0xFF5FBF2B), // Green
-    Color(0xFF7A2EDB), // Purple
-    Color(0xFF0B86EA), // Blue
+    Color(0xFFFF2D8D), // 0: Neon Pink
+    Color(0xFFFF7A0E), // 1: Neon Orange
+    Color(0xFFFFD600), // 2: Bright Neon Yellow
+    Color(0xFF00E676), // 3: Vivid Emerald Green
+    Color(0xFF8A3BF5), // 4: Electric Purple
+    Color(0xFF00E5FF), // 5: Vivid Cyan Aqua
   ];
 
   static const List<Color> blockShades = [
-    Color(0xFFC81467),
-    Color(0xFFC85705),
-    Color(0xFFC69004),
-    Color(0xFF448D1D),
-    Color(0xFF571B9F),
-    Color(0xFF0761AB),
+    Color(0xFFB01058), // Pink 3D bevel shade
+    Color(0xFFB34A00), // Orange 3D bevel shade
+    Color(0xFFB38F00), // Yellow 3D bevel shade
+    Color(0xFF009647), // Green 3D bevel shade
+    Color(0xFF5317A8), // Purple 3D bevel shade
+    Color(0xFF0091B3), // Cyan 3D bevel shade
+  ];
+
+  // Dynamic Deep Contrast Dark Text per block color
+  static const List<Color> blockDarkTexts = [
+    Color(0xFF4A0022), // Deep Velvet Berry for Pink
+    Color(0xFF4A1900), // Deep Espresso Umber for Orange
+    Color(0xFF4D3700), // Deep Dark Amber for Yellow
+    Color(0xFF003816), // Deep Forest Pine for Green
+    Color(0xFF22004D), // Deep Midnight Violet for Purple
+    Color(0xFF002B47), // Deep Navy Indigo for Cyan
   ];
 
   // Orbs

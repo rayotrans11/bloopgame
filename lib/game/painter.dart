@@ -117,30 +117,51 @@ class GamePainter extends CustomPainter {
     final colorIdx = b.colorIndex % GameColors.blockColors.length;
     final baseColor = GameColors.blockColors[colorIdx];
     final shadeColor = GameColors.blockShades[colorIdx];
+    final textColor = GameColors.blockDarkTexts[colorIdx];
 
-    final rad = Radius.circular(l.cellW * 0.16);
+    // Exaggerated chubby cartoon corner radius & 3D bevel
+    final rad = Radius.circular(l.cellW * 0.22);
     final fillPaint = Paint()..color = baseColor;
     final shadePaint = Paint()..color = shadeColor;
-    final bevelH = (4.5 * l.u).clamp(2.5, 6.0);
+    final bevelH = (5.5 * l.u).clamp(3.0, 7.5);
 
     if (b.kind == BlockKind.square) {
-      // 3D bottom bevel
+      // 1. Soft bottom ambient neon drop shadow
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect.shift(Offset(0, bevelH + 2 * l.u)), rad),
+        Paint()
+          ..color = shadeColor.withValues(alpha: 0.5)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * l.u),
+      );
+
+      // 2. Chunky 3D bottom bevel
       final shadeRRect = RRect.fromRectAndRadius(rect.shift(Offset(0, bevelH)), rad);
       canvas.drawRRect(shadeRRect, shadePaint);
 
-      // Top glossy face
+      // 3. Top glossy neon cartoon face
       final topRRect = RRect.fromRectAndRadius(rect, rad);
       canvas.drawRRect(topRRect, fillPaint);
 
-      // Subtle top highlight sheen
-      final highlightPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.2)
-        ..style = PaintingStyle.fill;
-      final highlightRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(rect.left + 3 * l.u, rect.top + 2 * l.u, rect.width - 6 * l.u, rect.height * 0.28),
-        Radius.circular(l.cellW * 0.1),
+      // 4. Inset border highlight for toy/candy depth
+      canvas.drawRRect(
+        topRRect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.25)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6 * l.u,
       );
-      canvas.drawRRect(highlightRect, highlightPaint);
+
+      // 5. Cartoon pill specular glossy sheen
+      final highlightRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(rect.left + 3.5 * l.u, rect.top + 2.5 * l.u, rect.width - 7 * l.u, rect.height * 0.32),
+        Radius.circular(l.cellW * 0.16),
+      );
+      canvas.drawRRect(
+        highlightRect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.35)
+          ..style = PaintingStyle.fill,
+      );
     } else {
       // Triangle block
       final pts = _triPts(rect, b.kind);
@@ -158,20 +179,26 @@ class GamePainter extends CustomPainter {
       canvas.drawPath(
         hlPath,
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.25)
-          ..strokeWidth = 2.0 * l.u
+          ..color = Colors.white.withValues(alpha: 0.35)
+          ..strokeWidth = 2.5 * l.u
           ..style = PaintingStyle.stroke,
       );
     }
 
-    // Block HP number
-    final fs = math.min(l.cellW, l.cellH) * 0.52;
-    final tp = _text('${b.hp}', fs);
+    // Dynamic Deep Contrast Dark Number with stamped toy engraving look
+    final fs = math.min(l.cellW, l.cellH) * 0.50;
+    final tp = _text('${b.hp}', fs, color: textColor, weight: FontWeight.w900);
     Offset c = rect.center;
     if (b.kind != BlockKind.square) {
       final pts = _triPts(rect, b.kind);
       c = (pts[0] + pts[1] + pts[2]) / 3;
     }
+
+    // Stamped subtle inner highlight under number
+    final tpUnder = _text('${b.hp}', fs, color: Colors.white.withValues(alpha: 0.25), weight: FontWeight.w900);
+    tpUnder.paint(canvas, c - Offset(tpUnder.width / 2, tpUnder.height / 2 - 1.2 * l.u));
+
+    // Crisp dark text
     tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
   }
 
