@@ -69,5 +69,60 @@ void main() {
       player.setTrail('fire');
       expect(player.ballTrail, 'fire');
     });
+
+    test('Warp Portals teleport balls across paired coordinates', () {
+      final layout = Layout(const Size(400, 800));
+      final portal1 = Orb(col: 2, row: 2, kind: OrbKind.portalBlue, portalTargetCol: 8, portalTargetRow: 2);
+      final portal2 = Orb(col: 8, row: 2, kind: OrbKind.portalOrange, portalTargetCol: 2, portalTargetRow: 2);
+
+      final engine = GameEngine(
+        layout: layout,
+        startBlocks: [],
+        startOrbs: [portal1, portal2],
+        baseBalls: 5,
+        descendEachTurn: false,
+      );
+
+      final ball = Ball(
+        pos: layout.cellCenter(2, 2),
+        vel: const Offset(100, 0),
+      );
+      engine.balls.add(ball);
+      engine.phase = Phase.shooting;
+      engine.update(0.02);
+
+      // Ball should have been teleported near target portal (8, 2)
+      final targetCenter = layout.cellCenter(8, 2);
+      expect((ball.pos - targetCenter).distance, lessThan(layout.cellW));
+    });
+
+    test('Boss summons mini-drones and activates dynamic energy shield', () {
+      final bossDef = LevelRepository.getBossLevel(1);
+      final layout = Layout(const Size(400, 800));
+      final engine = GameEngine(
+        layout: layout,
+        startBlocks: bossDef.blocks,
+        startOrbs: bossDef.orbs,
+        baseBalls: bossDef.balls,
+        descendEachTurn: false,
+        gameMode: GameMode.bossRush,
+      );
+
+      // Force Boss to enter Enraged state (<50% HP)
+      for (final b in engine.blocks.where((b) => b.isBoss)) {
+        b.hp = 10;
+      }
+      engine.bossEnraged = true;
+      engine.bossTurnCounter = 1; // Next turn will be 2 (even -> trigger drone spawn)
+
+      // Simulate returning balls
+      engine.balls.add(Ball(pos: Offset(100, layout.floorY - layout.r), vel: Offset.zero)..landed = true);
+      engine.phase = Phase.returning;
+      for (int i = 0; i < 10; i++) {
+        engine.update(1 / 30); // 10 * (1/30) = 0.33s > 0.18s
+      }
+
+      expect(engine.blocks.any((b) => b.isDrone), isTrue);
+    });
   });
 }

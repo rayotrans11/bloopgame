@@ -68,6 +68,11 @@ class GameEngine {
   int comboCount = 0;
   double comboTimer = 0.0;
 
+  // Boss Mechanics state
+  int bossTurnCounter = 0;
+  bool bossShieldActive = false; // Phase 1: Reflective Energy Shield
+  bool bossEnraged = false; // Phase 2: Below 50% HP (Enraged summoning)
+
   double launcherX = 0;
   double? firstLandX;
   Offset aimDir = const Offset(0, -1);
@@ -244,6 +249,11 @@ class GameEngine {
         b.trail.removeLast();
       }
 
+      // Tick portal cooldown
+      if (b.portalCooldown > 0) {
+        b.portalCooldown = math.max(0.0, b.portalCooldown - h);
+      }
+
       b.pos += b.vel * h;
 
       // Left wall
@@ -301,7 +311,7 @@ class GameEngine {
     Offset closest;
     bool inside = false;
 
-    if (blk.kind == BlockKind.square || blk.kind == BlockKind.boss) {
+    if (blk.kind == BlockKind.square || blk.kind == BlockKind.boss || blk.kind == BlockKind.drone) {
       closest = Offset(
         p.dx.clamp(rect.left, rect.right),
         p.dy.clamp(rect.top, rect.bottom),
@@ -351,7 +361,21 @@ class GameEngine {
     final rad = layout.cellW * 0.38 + layout.r;
     for (final o in orbs) {
       if (o.consumed) continue;
-      if ((layout.cellCenter(o.col, o.row) - b.pos).distance < rad) {
+      final orbPos = layout.cellCenter(o.col, o.row);
+      if ((orbPos - b.pos).distance < rad) {
+        // Warp Portal handling: teleport ball to partner portal!
+        if (o.isPortal) {
+          if (b.portalCooldown <= 0 && o.portalTargetCol != null && o.portalTargetRow != null) {
+            final targetCenter = layout.cellCenter(o.portalTargetCol!, o.portalTargetRow!);
+            b.pos = targetCenter + (b.vel / b.vel.distance) * (rad + 2.0);
+            b.portalCooldown = 0.25; // Prevent immediate ping-pong loop
+            _burst(orbPos, 8);
+            _burst(targetCenter, 8);
+            onOrbTriggered?.call();
+          }
+          continue;
+        }
+
         o.consumed = true;
         _triggerOrb(o);
       }
@@ -386,10 +410,22 @@ class GameEngine {
           _damage(b, 1);
         }
         break;
+      case OrbKind.portalBlue:
+      case OrbKind.portalOrange:
+        // Portals do not trigger on-death bolt actions
+        break;
     }
   }
 
   void _damage(Block blk, [int? amount]) {
+    // If Boss energy shield is active, deflect attack!
+    if (blk.isBoss && bossShieldActive) {
+      blk.pulse = 1.0;
+      onBlockHit?.call();
+      _burst(layout.cellCenter(blk.col, blk.row), 6);
+      return;
+    }
+
     final dmg = amount ?? damage;
     blk.hp -= dmg;
     blk.pulse = 1.0;
@@ -401,6 +437,13 @@ class GameEngine {
           other.hp = blk.hp;
           other.pulse = 1.0;
         }
+      }
+
+      // Check for Phase 2: Enraged state under 50% HP
+      final maxHp = blk.bossMaxHp ?? blk.maxHp;
+      if (blk.hp <= maxHp * 0.5 && !bossEnraged) {
+        bossEnraged = true;
+        _burst(layout.cellCenter(blk.col, blk.row), 40);
       }
     }
 
@@ -470,6 +513,19 @@ class GameEngine {
       return;
     }
 
+    // Boss Turn Counter & Phase Mechanics
+    if (gameMode == GameMode.bossRush) {
+      bossTurnCounter++;
+      // Energy shield toggles every 3 turns
+      bossShieldActive = (bossTurnCounter % 3 == 0);
+
+      // Phase 2: If enraged (<50% HP), Boss summons 2 mini drone minions
+      final bossAlive = blocks.any((b) => b.alive && b.isBoss);
+      if (bossAlive && bossEnraged && bossTurnCounter % 2 == 0) {
+        _summonBossDrones();
+      }
+    }
+
     if (descendEachTurn) {
       for (final b in blocks.where((b) => b.alive)) {
         b.row++;
@@ -485,6 +541,30 @@ class GameEngine {
       }
     }
     phase = Phase.idle;
+  }
+
+  void _summonBossDrones() {
+    final emptyCols = <int>[];
+    for (int c = 1; c < Layout.cols - 1; c++) {
+      if (blocks.every((b) => !b.alive || b.col != c || b.row != 1)) {
+        emptyCols.add(c);
+      }
+    }
+    emptyCols.shuffle(_rnd);
+    final count = math.min(2, emptyCols.length);
+    for (int i = 0; i < count; i++) {
+      final col = emptyCols[i];
+      final drone = Block(
+        col: col,
+        row: 1,
+        hp: 4,
+        colorIndex: 5,
+        kind: BlockKind.drone,
+      );
+      blocks.add(drone);
+      _burst(layout.cellCenter(col, 1), 14);
+    }
+    _rebuildGrid();
   }
 
   void _rebuildGrid() {

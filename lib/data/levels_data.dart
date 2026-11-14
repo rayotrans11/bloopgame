@@ -107,11 +107,17 @@ class LevelRepository {
       blocks.add(Block(col: c, row: 4, hp: 4 + bossIndex * 2, colorIndex: 1));
     }
 
-    // Strategic orbs
+    // Strategic orbs & Portals (Pair Blue (1, 1) <-> Orange (9, 1))
     orbs.add(Orb(col: 2, row: 1, kind: OrbKind.horizontal));
     orbs.add(Orb(col: 8, row: 1, kind: OrbKind.horizontal));
     orbs.add(Orb(col: 5, row: 1, kind: OrbKind.plusOne));
     orbs.add(Orb(col: 5, row: 5, kind: OrbKind.vertical));
+
+    // Paired Warp Portals to flank behind Boss!
+    final pBlue = Orb(col: 1, row: 1, kind: OrbKind.portalBlue, portalTargetCol: 9, portalTargetRow: 1);
+    final pOrange = Orb(col: 9, row: 1, kind: OrbKind.portalOrange, portalTargetCol: 1, portalTargetRow: 1);
+    orbs.add(pBlue);
+    orbs.add(pOrange);
 
     return LevelDefinition(
       level: 1000 + bossIndex,
@@ -244,13 +250,23 @@ class LevelRepository {
               : BlockKind.square;
 
           blocks.add(Block(col: c, row: r, hp: hp, colorIndex: colorIdx, kind: kind));
-        } else if (roll < 0.40 && orbs.length < 4) {
+        } else if (roll < 0.40 && orbs.length < 5) {
           occupied.add(key);
           final orbRoll = rng.nextDouble();
-          final kind = orbRoll < 0.35
-              ? OrbKind.plusOne
-              : (orbRoll < 0.68 ? OrbKind.horizontal : OrbKind.vertical);
-          orbs.add(Orb(col: c, row: r, kind: kind));
+          // Level 4+ has a chance of spawning paired warp portals!
+          if (levelId >= 4 && orbRoll < 0.20 && orbs.every((o) => !o.isPortal)) {
+            // Find another open slot for matching portal
+            final targetCol = (10 - c).clamp(0, 10);
+            final targetKey = '$targetCol,$r';
+            occupied.add(targetKey);
+            orbs.add(Orb(col: c, row: r, kind: OrbKind.portalBlue, portalTargetCol: targetCol, portalTargetRow: r));
+            orbs.add(Orb(col: targetCol, row: r, kind: OrbKind.portalOrange, portalTargetCol: c, portalTargetRow: r));
+          } else {
+            final kind = orbRoll < 0.40
+                ? OrbKind.plusOne
+                : (orbRoll < 0.70 ? OrbKind.horizontal : OrbKind.vertical);
+            orbs.add(Orb(col: c, row: r, kind: kind));
+          }
         }
       }
     }

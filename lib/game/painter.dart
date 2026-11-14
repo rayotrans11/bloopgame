@@ -109,6 +109,11 @@ class GamePainter extends CustomPainter {
       return;
     }
 
+    if (b.isDrone) {
+      _drawDroneBlock(canvas, l, b, rect);
+      return;
+    }
+
     final colorIdx = b.colorIndex % GameColors.blockColors.length;
     final baseColor = GameColors.blockColors[colorIdx];
     final shadeColor = GameColors.blockShades[colorIdx];
@@ -172,8 +177,10 @@ class GamePainter extends CustomPainter {
 
   void _drawBossBlock(Canvas canvas, Layout l, Block b, Rect rect) {
     final fillPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFFF1744), Color(0xFFD500F9)],
+      ..shader = LinearGradient(
+        colors: engine.bossEnraged
+            ? const [Color(0xFFFF0055), Color(0xFFFF5252)]
+            : const [Color(0xFFFF1744), Color(0xFFD500F9)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(rect);
@@ -182,16 +189,51 @@ class GamePainter extends CustomPainter {
     final topRRect = RRect.fromRectAndRadius(rect, rad);
     canvas.drawRRect(topRRect, fillPaint);
 
-    // Glowing border
+    // Glowing border (Flashing yellow when reflective energy shield is active)
+    final glowColor = engine.bossShieldActive
+        ? const Color(0xFFFFEA00)
+        : engine.bossEnraged
+            ? const Color(0xFFFF1744)
+            : const Color(0xFFFF4081);
+
     final glowPaint = Paint()
-      ..color = const Color(0xFFFF4081).withValues(alpha: 0.8)
+      ..color = glowColor.withValues(alpha: engine.bossShieldActive ? 0.95 : 0.8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5 * l.u;
+      ..strokeWidth = (engine.bossShieldActive ? 4.0 : 2.5) * l.u;
     canvas.drawRRect(topRRect, glowPaint);
+
+    // Shield active indicator ring
+    if (engine.bossShieldActive) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect.inflate(3 * l.u), Radius.circular(l.cellW * 0.22)),
+        Paint()
+          ..color = const Color(0xFFFFD600).withValues(alpha: 0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8 * l.u,
+      );
+    }
 
     // HP Text
     final fs = math.min(l.cellW, l.cellH) * 0.5;
     final tp = _text('${b.hp}', fs, color: Colors.white, weight: FontWeight.w900);
+    tp.paint(canvas, rect.center - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  void _drawDroneBlock(Canvas canvas, Layout l, Block b, Rect rect) {
+    final fillPaint = Paint()..color = const Color(0xFF651FFF);
+    final rad = Radius.circular(l.cellW * 0.16);
+    final topRRect = RRect.fromRectAndRadius(rect, rad);
+    canvas.drawRRect(topRRect, fillPaint);
+
+    final borderPaint = Paint()
+      ..color = const Color(0xFFB388FF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0 * l.u;
+    canvas.drawRRect(topRRect, borderPaint);
+
+    // Drone HP
+    final fs = math.min(l.cellW, l.cellH) * 0.5;
+    final tp = _text('${b.hp}', fs, color: Colors.white, weight: FontWeight.w800);
     tp.paint(canvas, rect.center - Offset(tp.width / 2, tp.height / 2));
   }
 
@@ -328,6 +370,27 @@ class GamePainter extends CustomPainter {
       case OrbKind.plusOne:
         final tp = _text('+1', rad * 0.95);
         tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+        break;
+      case OrbKind.portalBlue:
+      case OrbKind.portalOrange:
+        final isBlue = o.kind == OrbKind.portalBlue;
+        final portalColor = isBlue ? const Color(0xFF00E5FF) : const Color(0xFFFF9100);
+        // Swirling Portal vortex
+        canvas.drawCircle(
+          c,
+          rad * 0.85,
+          Paint()
+            ..color = portalColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3.5 * l.u,
+        );
+        canvas.drawCircle(
+          c,
+          rad * 0.45,
+          Paint()..color = portalColor.withValues(alpha: 0.8),
+        );
+        final tpP = _text('🌀', rad * 0.9);
+        tpP.paint(canvas, c - Offset(tpP.width / 2, tpP.height / 2));
         break;
     }
   }
