@@ -1,9 +1,76 @@
 import 'dart:ui';
 
 enum BlockKind { square, triBL, triBR, triTL, triTR, boss, drone }
-enum OrbKind { horizontal, vertical, plusOne, portalBlue, portalOrange }
+enum OrbKind { horizontal, vertical, plusOne, portalBlue, portalOrange, rainbow, bomb, freeze }
 enum GameMode { classic, bossRush, speedRush }
 
+/// Color pallet indices for marble / bubble orbs:
+/// 0: Pink/Magenta (0xFFFF2D8D)
+/// 1: Electric Orange (0xFFFF6D00)
+/// 2: Radiant Yellow (0xFFFFD600)
+/// 3: Neon Green (0xFF00E676)
+/// 4: Vivid Purple (0xFF7C4DFF)
+/// 5: Cyan Blue (0xFF00E5FF)
+/// 6: Rainbow Wildcard (-1 / wildcard)
+/// 7: Bomb (-2)
+class CannonColor {
+  static const int pink = 0;
+  static const int orange = 1;
+  static const int yellow = 2;
+  static const int green = 3;
+  static const int purple = 4;
+  static const int cyan = 5;
+  static const int wildcard = 6;
+  static const int bomb = 7;
+  static const int freeze = 8;
+  static const int count = 6; // basic match colors
+}
+
+/// A descending target orb in the real-time siege field
+class TargetOrb {
+  TargetOrb({
+    required this.col,
+    required this.row,
+    required this.colorIndex,
+    this.hp = 1,
+    this.isBoss = false,
+    this.bossMaxHp,
+    this.bossTitle,
+  }) : maxHp = hp;
+
+  int col;
+  double row; // continuous real-time descent
+  int colorIndex; // 0..5 or special
+  int hp;
+  final int maxHp;
+  final bool isBoss;
+  final int? bossMaxHp;
+  final String? bossTitle;
+
+  double pulse = 0.0;
+  double dying = 0.0;
+  bool isFalling = false; // When disconnected from cluster ceiling
+  Offset fallVel = Offset.zero;
+
+  bool get alive => hp > 0;
+}
+
+/// A projectile marble shot from the Cannon
+class ProjectileOrb {
+  ProjectileOrb({
+    required this.pos,
+    required this.vel,
+    required this.colorIndex,
+  });
+
+  Offset pos;
+  Offset vel;
+  final int colorIndex;
+  final List<Offset> trail = [];
+  bool active = true;
+}
+
+/// Legacy Block class maintained for full backwards compatibility
 class Block {
   Block({
     required this.col,
@@ -29,8 +96,8 @@ class Block {
   bool get isBoss => kind == BlockKind.boss;
   bool get isDrone => kind == BlockKind.drone;
 
-  double pulse = 0.0; // 1.0 down to 0.0 on hit
-  double dying = 0.0; // 0.0 alive, >0.0 exploding/shrinking
+  double pulse = 0.0;
+  double dying = 0.0;
 
   bool get alive => hp > 0;
 }
@@ -65,7 +132,7 @@ class Ball {
   Offset vel;
   bool landed = false;
   final List<Offset> trail = [];
-  double portalCooldown = 0.0; // Prevent instant ping-pong re-entry
+  double portalCooldown = 0.0;
 }
 
 class Particle {

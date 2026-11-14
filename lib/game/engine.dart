@@ -22,7 +22,57 @@ class GameEngine {
     orbs = startOrbs;
     ballCount = baseBalls;
     launcherX = layout.w / 2;
+    _initCannonOrbs();
     _rebuildGrid();
+  }
+
+  void _initCannonOrbs() {
+    currentCannonColor = _rnd.nextInt(CannonColor.count);
+    nextCannonColor = _rnd.nextInt(CannonColor.count);
+
+    // Convert starting blocks into colorful target orbs for cannon defense!
+    targetOrbs.clear();
+    for (final b in blocks) {
+      targetOrbs.add(TargetOrb(
+        col: b.col,
+        row: b.row.toDouble(),
+        colorIndex: b.colorIndex % CannonColor.count,
+        hp: b.hp,
+        isBoss: b.isBoss,
+        bossMaxHp: b.bossMaxHp,
+        bossTitle: b.bossTitle,
+      ));
+    }
+  }
+
+  void swapCannonOrbs() {
+    final temp = currentCannonColor;
+    currentCannonColor = nextCannonColor;
+    nextCannonColor = temp;
+  }
+
+  bool shootCannonOrb(Offset target) {
+    if (phase == Phase.won || phase == Phase.lost) return false;
+    if (rapidFireCooldown > 0) return false;
+
+    final from = Offset(launcherX, layout.floorY - layout.r);
+    final d = target - from;
+    if (d.dy > -layout.cellH * 0.1) return false;
+
+    final dist = d.distance;
+    final dir = dist > 0 ? d / dist : const Offset(0, -1);
+
+    projectileOrbs.add(ProjectileOrb(
+      pos: from,
+      vel: dir * (layout.speed * 1.6),
+      colorIndex: isWildcardActive ? CannonColor.wildcard : currentCannonColor,
+    ));
+
+    isWildcardActive = false;
+    currentCannonColor = nextCannonColor;
+    nextCannonColor = _rnd.nextInt(CannonColor.count);
+    rapidFireCooldown = 0.10; // Rapid snappy fire
+    return true;
   }
 
   Layout layout;
@@ -62,6 +112,16 @@ class GameEngine {
   int cashEarned = 0;
   int blocksDestroyedCount = 0;
   bool isFireActive = false;
+
+  // --- NEW: Direction 4 + 1 Bloop Cannon Defense State ---
+  final List<TargetOrb> targetOrbs = [];
+  final List<ProjectileOrb> projectileOrbs = [];
+  int currentCannonColor = 0;
+  int nextCannonColor = 1;
+  double descentSpeed = 0.14; // rows per second downward
+  double freezeTimer = 0.0;
+  double rapidFireCooldown = 0.0;
+  bool isWildcardActive = false;
 
   // Speed Rush timer and combo state
   double speedRushTimeRemaining = 60.0;
@@ -185,6 +245,16 @@ class GameEngine {
   void update(double dt) {
     dt = math.min(dt, 1 / 30);
 
+    // Update cooldowns
+    if (rapidFireCooldown > 0) rapidFireCooldown = math.max(0.0, rapidFireCooldown - dt);
+    if (freezeTimer > 0) freezeTimer = math.max(0.0, freezeTimer - dt);
+
+    // --- REAL-TIME CANNON DEFENSE DESCENT & PROJECTILES ---
+    _updateCannonProjectiles(dt);
+    if (freezeTimer <= 0 && phase != Phase.won && phase != Phase.lost) {
+      _updateTargetOrbsDescent(dt);
+    }
+
     // Speed Rush countdown
     if (gameMode == GameMode.speedRush && phase != Phase.won && phase != Phase.lost) {
       speedRushTimeRemaining -= dt;
@@ -224,6 +294,196 @@ class GameEngine {
   }
 
   double _easeOut(double t) => 1 - (1 - t) * (1 - t) * (1 - t);
+
+  void _updateTargetOrbsDescent(double dt) {
+    if (targetOrbs.isEmpty) return;
+
+    final baseSpeed = (gameMode == GameMode.speedRush) ? descentSpeed * 1.6 : descentSpeed;
+    final rowStep = baseSpeed * dt;
+
+    for (final orb in targetOrbs) {
+      if (!orb.alive) continue;
+
+      if (orb.isFalling) {
+        orb.fallVel += Offset(0, 800 * dt);
+        orb.row += (orb.fallVel.dy * dt) / layout.cellH;
+      } else {
+        orb.row += rowStep;
+      }
+
+      // Check if any orb crosses defense line
+      final orbY = layout.hudH + (orb.row + 0.5) * layout.cellH;
+      if (orbY >= layout.floorY - layout.r && !orb.isFalling) {
+        phase = Phase.lost;
+        return;
+      }
+    }
+
+    // Clean up orbs that fell off screen
+    targetOrbs.removeWhere((o) {
+      final y = layout.hudH + (o.row + 0.5) * layout.cellH;
+      return o.isFalling && y > layout.h;
+    });
+
+    // Check Win condition
+    if (targetOrbs.isNotEmpty && targetOrbs.every((o) => !o.alive || o.isFalling)) {
+      phase = Phase.won;
+    }
+  }
+
+  void _updateCannonProjectiles(double dt) {
+    for (final p in projectileOrbs) {
+      if (!p.active) continue;
+
+      p.trail.insert(0, p.pos);
+      if (p.trail.length > 5) p.trail.removeLast();
+
+      p.pos += p.vel * dt;
+
+      // Wall bounce
+      if (p.pos.dx < layout.r) {
+        p.pos = Offset(layout.r, p.pos.dy);
+        p.vel = Offset(p.vel.dx.abs(), p.vel.dy);
+      } else if (p.pos.dx > layout.w - layout.r) {
+        p.pos = Offset(layout.w - layout.r, p.pos.dy);
+        p.vel = Offset(-p.vel.dx.abs(), p.vel.dy);
+      }
+
+      // Ceiling bounce or deactivation
+      if (p.pos.dy < layout.hudH + layout.r) {
+        p.active = false;
+        continue;
+      }
+
+      // Target Orb collision
+      for (final target in targetOrbs) {
+        if (!target.alive || target.isFalling) continue;
+
+        final targetCenter = Offset(
+          layout.cellCenter(target.col, 0).dx,
+          layout.hudH + (target.row + 0.5) * layout.cellH,
+        );
+
+        final hitDist = (p.pos - targetCenter).distance;
+        if (hitDist < layout.cellW * 0.45 + layout.r) {
+          p.active = false;
+          _onProjectileHitTarget(p, target, targetCenter);
+          break;
+        }
+      }
+    }
+
+    projectileOrbs.removeWhere((p) => !p.active);
+  }
+
+  void _onProjectileHitTarget(ProjectileOrb p, TargetOrb hitOrb, Offset hitPos) {
+    onBlockHit?.call();
+    hitOrb.pulse = 1.0;
+
+    // Match-3 Color Cluster Search
+    final isMatch = (p.colorIndex == CannonColor.wildcard) ||
+        (hitOrb.colorIndex == p.colorIndex) ||
+        (p.colorIndex == CannonColor.bomb);
+
+    if (p.colorIndex == CannonColor.bomb) {
+      // Bomb: Explode 3x3 surrounding radius
+      _burst(hitPos, 25);
+      final affected = targetOrbs.where((o) =>
+          o.alive &&
+          !o.isFalling &&
+          (o.col - hitOrb.col).abs() <= 1 &&
+          (o.row - hitOrb.row).abs() <= 1.5).toList();
+      for (final a in affected) {
+        _popTargetOrb(a);
+      }
+      return;
+    }
+
+    if (isMatch) {
+      // Find connected matching color cluster (Flood Fill)
+      final cluster = _findMatchingCluster(hitOrb, p.colorIndex);
+      if (cluster.length >= 2 || p.colorIndex == CannonColor.wildcard || hitOrb.isBoss) {
+        for (final orb in cluster) {
+          _popTargetOrb(orb);
+        }
+        _burst(hitPos, 16);
+        _dropFloatingOrbs();
+      } else {
+        // Just deals 1 damage to single orb
+        hitOrb.hp -= damage;
+        if (hitOrb.hp <= 0) {
+          _popTargetOrb(hitOrb);
+          _dropFloatingOrbs();
+        }
+      }
+    } else {
+      // Color mismatch: Deals 1 damage
+      hitOrb.hp -= damage;
+      _burst(hitPos, 6);
+      if (hitOrb.hp <= 0) {
+        _popTargetOrb(hitOrb);
+        _dropFloatingOrbs();
+      }
+    }
+  }
+
+  List<TargetOrb> _findMatchingCluster(TargetOrb start, int matchColor) {
+    final visited = <TargetOrb>{};
+    final queue = <TargetOrb>[start];
+    visited.add(start);
+
+    final targetColor = (matchColor == CannonColor.wildcard) ? start.colorIndex : matchColor;
+
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      for (final neighbor in targetOrbs) {
+        if (!neighbor.alive || neighbor.isFalling || visited.contains(neighbor)) continue;
+        if (neighbor.colorIndex != targetColor && matchColor != CannonColor.wildcard) continue;
+
+        final isAdjacentCol = (neighbor.col - current.col).abs() <= 1;
+        final isAdjacentRow = (neighbor.row - current.row).abs() <= 1.2;
+        if (isAdjacentCol && isAdjacentRow) {
+          visited.add(neighbor);
+          queue.add(neighbor);
+        }
+      }
+    }
+    return visited.toList();
+  }
+
+  void _popTargetOrb(TargetOrb orb) {
+    orb.hp = 0;
+    orb.dying = 0.001;
+    blocksDestroyedCount++;
+    comboCount++;
+    final comboMult = (comboCount > 4) ? 2 : 1;
+    cashEarned += (orb.maxHp * 2 * comboMult);
+    _burst(
+      Offset(layout.cellCenter(orb.col, 0).dx, layout.hudH + (orb.row + 0.5) * layout.cellH),
+      orb.isBoss ? 28 : 12,
+    );
+    onBlockDestroyed?.call();
+  }
+
+  void _dropFloatingOrbs() {
+    // Orbs hanging without connection to the upper ceiling fall down
+    for (final orb in targetOrbs) {
+      if (!orb.alive || orb.isFalling || orb.isBoss) continue;
+      // If there are no active orbs above this row within adjacent columns
+      final hasCeilingSupport = orb.row <= 1.5 ||
+          targetOrbs.any((other) =>
+              other.alive &&
+              !other.isFalling &&
+              other.row < orb.row &&
+              (other.col - orb.col).abs() <= 1);
+
+      if (!hasCeilingSupport) {
+        orb.isFalling = true;
+        orb.fallVel = Offset((_rnd.nextDouble() - 0.5) * 80, 50);
+        cashEarned += 5; // Bonus dropped catch reward!
+      }
+    }
+  }
 
   void _emit(double dt) {
     if (toFire <= 0) return;
@@ -412,7 +672,10 @@ class GameEngine {
         break;
       case OrbKind.portalBlue:
       case OrbKind.portalOrange:
-        // Portals do not trigger on-death bolt actions
+      case OrbKind.rainbow:
+      case OrbKind.bomb:
+      case OrbKind.freeze:
+        // Handled via Cannon / defense mechanics
         break;
     }
   }

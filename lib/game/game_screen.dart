@@ -216,18 +216,30 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           return ListenableBuilder(
             listenable: widget.player,
             builder: (context, _) {
-              final isInFlight = engine.phase == Phase.shooting ||
-                  engine.phase == Phase.recalling ||
-                  engine.phase == Phase.returning;
-
               return Stack(
                 children: [
-                  // 1. Gesture detector for aiming and firing balls
+                  // 1. Gesture detector for Direction 4 + 1 Bloop Cannon shooting
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    onTapDown: (d) {
+                      // Tap to shoot cannon projectile
+                      if (engine.shootCannonOrb(d.localPosition)) {
+                        GameAudio.instance.play(GameSound.launch);
+                        GameAudio.instance.haptic(GameHaptic.light);
+                      }
+                    },
                     onPanStart: (d) => engine.setAim(d.localPosition),
                     onPanUpdate: (d) => engine.setAim(d.localPosition),
-                    onPanEnd: (_) => _fire(engine),
+                    onPanEnd: (_) {
+                      // Aim release fire
+                      if (engine.shootCannonOrb(engine.aimDir * 1000 + Offset(engine.launcherX, engine.layout.floorY))) {
+                        GameAudio.instance.play(GameSound.launch);
+                        GameAudio.instance.haptic(GameHaptic.light);
+                      } else {
+                        _fire(engine);
+                      }
+                      engine.cancelAim();
+                    },
                     onPanCancel: engine.cancelAim,
                     child: CustomPaint(
                       size: size,
@@ -389,64 +401,88 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
-                  // 3. Bottom Toolbar Area (Below Floor Line)
+                  // 3. Bottom Toolbar Area (Swap Cannon Orb & Power-Up Skills)
                   Positioned(
                     bottom: mq.padding.bottom > 0 ? mq.padding.bottom + 6 : 14,
                     left: 12,
                     right: 12,
-                    child: isInFlight
-                        // In-Flight: Wide Recovery Button (replaces power-ups, as observed in Screenshot C!)
-                        ? Center(
-                            child: GameButton3D(
-                              text: 'Recovery',
-                              width: 200,
-                              height: 52,
-                              fontSize: 22,
-                              surfaceColor: GameColors.recoveryIndigo,
-                              shadowColor: GameColors.recoveryDark,
-                              onTap: () {
-                                engine.recall();
-                                GameAudio.instance.play(GameSound.uiTap);
-                                GameAudio.instance.haptic(GameHaptic.selection);
-                              },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // SWAP Cannon Color Button
+                        GestureDetector(
+                          onTap: () {
+                            engine.swapCannonOrbs();
+                            GameAudio.instance.play(GameSound.uiTap);
+                            GameAudio.instance.haptic(GameHaptic.selection);
+                          },
+                          child: Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6A1B9A),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFE1BEE7), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  offset: const Offset(0, 3),
+                                  blurRadius: 4,
+                                ),
+                              ],
                             ),
-                          )
-                        // Idle / Aiming: 5 Power-Up Buttons (as observed in Screenshot B!)
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _powerupBtn(
-                                context,
-                                iconType: 'pu_smash',
-                                count: widget.player.powerups['smash'] ?? 0,
-                                onTap: () => _activatePowerup(context, engine, 'smash', engine.triggerSmash),
-                              ),
-                              _powerupBtn(
-                                context,
-                                iconType: 'pu_balls',
-                                count: widget.player.powerups['balls'] ?? 0,
-                                onTap: () => _activatePowerup(context, engine, 'balls', engine.triggerMoreBalls),
-                              ),
-                              _powerupBtn(
-                                context,
-                                iconType: 'pu_row',
-                                count: widget.player.powerups['rowBlast'] ?? 0,
-                                onTap: () => _activatePowerup(context, engine, 'rowBlast', engine.triggerRowBlast),
-                              ),
-                              _powerupBtn(
-                                context,
-                                iconType: 'pu_fire',
-                                count: widget.player.powerups['fire'] ?? 0,
-                                onTap: () => _activatePowerup(context, engine, 'fire', engine.triggerFireBall),
-                              ),
-                              _powerupBtn(
-                                context,
-                                iconType: 'pu_stone',
-                                count: widget.player.powerups['stone'] ?? 0,
-                                onTap: () => _activatePowerup(context, engine, 'stone', engine.triggerStoneBreaker),
-                              ),
-                            ],
+                            child: const Center(
+                              child: Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 30),
+                            ),
                           ),
+                        ),
+
+                        // Powerup 1: Bomb Wave
+                        _powerupBtn(
+                          context,
+                          iconType: 'pu_smash',
+                          count: widget.player.powerups['smash'] ?? 0,
+                          onTap: () => _activatePowerup(context, engine, 'smash', () {
+                            engine.projectileOrbs.add(ProjectileOrb(
+                              pos: Offset(engine.launcherX, engine.layout.floorY - engine.layout.r),
+                              vel: const Offset(0, -600),
+                              colorIndex: CannonColor.bomb,
+                            ));
+                            return true;
+                          }),
+                        ),
+
+                        // Powerup 2: Cryo Freeze (Freezes descent for 4s)
+                        _powerupBtn(
+                          context,
+                          iconType: 'pu_row',
+                          count: widget.player.powerups['rowBlast'] ?? 0,
+                          onTap: () => _activatePowerup(context, engine, 'rowBlast', () {
+                            engine.freezeTimer = 4.0;
+                            return true;
+                          }),
+                        ),
+
+                        // Powerup 3: Wildcard Rainbow Orb
+                        _powerupBtn(
+                          context,
+                          iconType: 'pu_fire',
+                          count: widget.player.powerups['fire'] ?? 0,
+                          onTap: () => _activatePowerup(context, engine, 'fire', () {
+                            engine.isWildcardActive = true;
+                            return true;
+                          }),
+                        ),
+
+                        // Powerup 4: Clear Bottom Row
+                        _powerupBtn(
+                          context,
+                          iconType: 'pu_stone',
+                          count: widget.player.powerups['stone'] ?? 0,
+                          onTap: () => _activatePowerup(context, engine, 'stone', engine.triggerSmash),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
