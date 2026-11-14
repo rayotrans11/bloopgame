@@ -1,7 +1,8 @@
 import 'dart:ui';
 
-enum BlockKind { square, triBL, triBR, triTL, triTR }
+enum BlockKind { square, triBL, triBR, triTL, triTR, boss }
 enum OrbKind { horizontal, vertical, plusOne }
+enum GameMode { classic, bossRush, speedRush }
 
 class Block {
   Block({
@@ -11,6 +12,8 @@ class Block {
     required this.colorIndex,
     this.kind = BlockKind.square,
     this.isStone = false,
+    this.bossMaxHp,
+    this.bossTitle,
   }) : maxHp = hp;
 
   int col;
@@ -20,6 +23,10 @@ class Block {
   final int colorIndex;
   final BlockKind kind;
   final bool isStone;
+  final int? bossMaxHp;
+  final String? bossTitle;
+
+  bool get isBoss => kind == BlockKind.boss;
 
   double pulse = 0.0; // 1.0 down to 0.0 on hit
   double dying = 0.0; // 0.0 alive, >0.0 exploding/shrinking
@@ -50,6 +57,7 @@ class Ball {
   Offset pos;
   Offset vel;
   bool landed = false;
+  final List<Offset> trail = [];
 }
 
 class Particle {

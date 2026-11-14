@@ -18,6 +18,16 @@ class PlayerState extends ChangeNotifier {
   String ballSkin = 'yellow';
   List<String> ownedSkins = ['yellow', 'basketball', 'tricolor', 'star', 'star_burst'];
   
+  // Custom Ball Trails
+  String ballTrail = 'neon'; // none, neon, rainbow, fire, cosmic
+  List<String> ownedTrails = ['none', 'neon', 'rainbow', 'fire', 'cosmic'];
+
+  // Game Statistics & Achievements
+  int totalBlocksPopped = 0;
+  int bossesDefeated = 0;
+  int speedRushHighScore = 0;
+  List<String> claimedAchievements = [];
+
   Map<String, int> powerups = {
     'smash': 2,
     'balls': 3,
@@ -162,6 +172,44 @@ class PlayerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setTrail(String trail) {
+    ballTrail = trail;
+    save();
+    notifyListeners();
+  }
+
+  void recordBlockPopped([int count = 1]) {
+    totalBlocksPopped += count;
+    save();
+    notifyListeners();
+  }
+
+  void recordBossDefeated() {
+    bossesDefeated += 1;
+    save();
+    notifyListeners();
+  }
+
+  void recordSpeedRushScore(int score) {
+    if (score > speedRushHighScore) {
+      speedRushHighScore = score;
+      save();
+      notifyListeners();
+    }
+  }
+
+  bool isAchievementClaimed(String id) => claimedAchievements.contains(id);
+
+  bool claimAchievement(String id, {int gemsReward = 0, double cashReward = 0.0}) {
+    if (claimedAchievements.contains(id)) return false;
+    claimedAchievements.add(id);
+    if (gemsReward > 0) addGems(gemsReward);
+    if (cashReward > 0) addCash(cashReward);
+    save();
+    notifyListeners();
+    return true;
+  }
+
   void toggleSound() {
     sound = !sound;
     save();
@@ -193,6 +241,12 @@ class PlayerState extends ChangeNotifier {
         'chestProgress': chestProgress,
         'ballSkin': ballSkin,
         'ownedSkins': ownedSkins,
+        'ballTrail': ballTrail,
+        'ownedTrails': ownedTrails,
+        'totalBlocksPopped': totalBlocksPopped,
+        'bossesDefeated': bossesDefeated,
+        'speedRushHighScore': speedRushHighScore,
+        'claimedAchievements': claimedAchievements,
         'powerups': powerups,
         'vip': vip,
         'sound': sound,
@@ -218,6 +272,12 @@ class PlayerState extends ChangeNotifier {
         chestProgress = map['chestProgress'] ?? chestProgress;
         ballSkin = (map['ballSkin'] == null || map['ballSkin'] == 'white') ? 'yellow' : map['ballSkin'];
         ownedSkins = List<String>.from(map['ownedSkins'] ?? ownedSkins);
+        ballTrail = map['ballTrail'] ?? ballTrail;
+        ownedTrails = List<String>.from(map['ownedTrails'] ?? ownedTrails);
+        totalBlocksPopped = map['totalBlocksPopped'] ?? totalBlocksPopped;
+        bossesDefeated = map['bossesDefeated'] ?? bossesDefeated;
+        speedRushHighScore = map['speedRushHighScore'] ?? speedRushHighScore;
+        claimedAchievements = List<String>.from(map['claimedAchievements'] ?? claimedAchievements);
         if (map['powerups'] != null) {
           powerups = Map<String, int>.from(map['powerups']);
         }

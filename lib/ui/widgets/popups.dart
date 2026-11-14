@@ -455,6 +455,309 @@ class Popups {
     );
   }
 
+  static void showSpeedRushSummary(BuildContext context, int score, int bestScore, VoidCallback onClose) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => GameDialogWrapper(
+        title: 'TIME UP! SPEED RUSH',
+        content: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6D00),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Column(
+                children: [
+                  const Text('FINAL SCORE', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('$score PTS', style: const TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 4),
+                  Text('HIGH SCORE: $bestScore PTS', style: const TextStyle(fontFamily: 'Fredoka', color: Colors.yellowAccent, fontSize: 14, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '+10 Gems Earned for completing Speed Rush!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontSize: 15),
+            ),
+          ],
+        ),
+        actions: [
+          GameButton3D(
+            text: 'CONTINUE',
+            width: 160,
+            height: 52,
+            fontSize: 20,
+            surfaceColor: GameColors.startBlue,
+            shadowColor: GameColors.startBlueDark,
+            onTap: () {
+              Navigator.of(ctx).pop();
+              onClose();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void showAchievements(BuildContext context, PlayerState player) {
+    final achievements = [
+      {
+        'id': 'pop_50',
+        'title': 'Pop Starter',
+        'desc': 'Pop 50 total blocks',
+        'cur': player.totalBlocksPopped,
+        'target': 50,
+        'gems': 20,
+        'cash': 0.10,
+      },
+      {
+        'id': 'pop_200',
+        'title': 'Block Demolisher',
+        'desc': 'Pop 200 total blocks',
+        'cur': player.totalBlocksPopped,
+        'target': 200,
+        'gems': 50,
+        'cash': 0.25,
+      },
+      {
+        'id': 'boss_1',
+        'title': 'Guardian Slayer',
+        'desc': 'Defeat your first Boss Guardian',
+        'cur': player.bossesDefeated,
+        'target': 1,
+        'gems': 30,
+        'cash': 0.20,
+      },
+      {
+        'id': 'boss_5',
+        'title': 'Titan Overlord',
+        'desc': 'Defeat 5 Boss Guardians',
+        'cur': player.bossesDefeated,
+        'target': 5,
+        'gems': 100,
+        'cash': 0.50,
+      },
+      {
+        'id': 'speed_100',
+        'title': 'Speed Demon',
+        'desc': 'Score 100+ points in Speed Rush 60s',
+        'cur': player.speedRushHighScore,
+        'target': 100,
+        'gems': 40,
+        'cash': 0.15,
+      },
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => ListenableBuilder(
+        listenable: player,
+        builder: (ctx, _) => Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0C103C),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: const Color(0xFF4D3BC6), width: 3.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    ...achievements.map((ach) {
+                      final id = ach['id'] as String;
+                      final title = ach['title'] as String;
+                      final desc = ach['desc'] as String;
+                      final cur = ach['cur'] as int;
+                      final target = ach['target'] as int;
+                      final gems = ach['gems'] as int;
+                      final cash = (ach['cash'] as num).toDouble();
+                      final isClaimed = player.isAchievementClaimed(id);
+                      final isCompleted = cur >= target;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1F54),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isClaimed
+                                ? Colors.grey.withValues(alpha: 0.4)
+                                : isCompleted
+                                    ? Colors.amberAccent
+                                    : const Color(0xFF38357A),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isClaimed
+                                  ? Icons.check_circle_rounded
+                                  : isCompleted
+                                      ? Icons.military_tech_rounded
+                                      : Icons.lock_clock_rounded,
+                              color: isClaimed
+                                  ? Colors.greenAccent
+                                  : isCompleted
+                                      ? Colors.amberAccent
+                                      : Colors.white54,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontFamily: 'Fredoka',
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    desc,
+                                    style: TextStyle(
+                                      fontFamily: 'Fredoka',
+                                      fontSize: 12,
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: (cur / target).clamp(0.0, 1.0),
+                                      backgroundColor: Colors.black26,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        isCompleted ? Colors.amberAccent : const Color(0xFF00E5FF),
+                                      ),
+                                      minHeight: 6,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (isClaimed)
+                              const Text(
+                                'CLAIMED',
+                                style: TextStyle(
+                                  fontFamily: 'Fredoka',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white38,
+                                ),
+                              )
+                            else
+                              GestureDetector(
+                                onTap: isCompleted
+                                    ? () {
+                                        player.claimAchievement(id, gemsReward: gems, cashReward: cash);
+                                        GameAudio.instance.play(GameSound.win);
+                                      }
+                                    : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isCompleted ? const Color(0xFFFF2D8D) : Colors.grey.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    isCompleted ? 'CLAIM' : '${cur.clamp(0, target)}/$target',
+                                    style: const TextStyle(
+                                      fontFamily: 'Fredoka',
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+              // Top Centered Pill
+              Positioned(
+                top: -18,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A3FC7),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF7A6DF0), width: 2.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          offset: const Offset(0, 4),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: const OutlinedButtonText('ACHIEVEMENTS', fontSize: 18, strokeWidth: 3.8),
+                  ),
+                ),
+              ),
+
+              // Close Button
+              Positioned(
+                top: -10,
+                right: -6,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(ctx).pop(),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF2D55),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2.2),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.close, color: Colors.white, size: 24),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static void showSkins(BuildContext context, PlayerState player) {
     showDialog(
       context: context,
@@ -497,6 +800,34 @@ class Popups {
                     _skinRow(ctx, player, 'star', 'Star'),
                     const SizedBox(height: 10),
                     _skinRow(ctx, player, 'star_burst', 'Star Burst'),
+                    const SizedBox(height: 16),
+
+                    // Distinct Ball Trails Selector
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'BALL TRAIL VFX',
+                        style: TextStyle(
+                          fontFamily: 'Fredoka',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF00E5FF),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _trailChip(player, 'none', 'None'),
+                        _trailChip(player, 'neon', 'Cyan Neon'),
+                        _trailChip(player, 'rainbow', 'Rainbow'),
+                        _trailChip(player, 'fire', 'Blaze Fire'),
+                        _trailChip(player, 'cosmic', 'Cosmic'),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -554,6 +885,33 @@ class Popups {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _trailChip(PlayerState player, String id, String label) {
+    final isSelected = player.ballTrail == id;
+    return GestureDetector(
+      onTap: () => player.setTrail(id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00E5FF) : const Color(0xFF1E216B),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.white : const Color(0xFF4D3BC6),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Fredoka',
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.black : Colors.white,
           ),
         ),
       ),

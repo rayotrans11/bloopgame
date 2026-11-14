@@ -9,11 +9,13 @@ class GamePainter extends CustomPainter {
   GamePainter({
     required this.engine,
     required this.ballSkin,
+    this.ballTrail = 'neon',
     super.repaint,
   });
 
   final GameEngine engine;
   final String ballSkin;
+  final String ballTrail;
   static final Map<String, TextPainter> _tpCache = {};
 
   TextPainter _text(String s, double size, {Color color = Colors.white, FontWeight weight = FontWeight.w700}) {
@@ -83,6 +85,9 @@ class GamePainter extends CustomPainter {
       _drawAim(canvas, l);
     }
 
+    // Ball Trails
+    _drawBallTrails(canvas, l);
+
     // Balls
     _drawBalls(canvas, l);
 
@@ -99,6 +104,11 @@ class GamePainter extends CustomPainter {
   }
 
   void _drawBlock(Canvas canvas, Layout l, Block b, Rect rect) {
+    if (b.isBoss) {
+      _drawBossBlock(canvas, l, b, rect);
+      return;
+    }
+
     final colorIdx = b.colorIndex % GameColors.blockColors.length;
     final baseColor = GameColors.blockColors[colorIdx];
     final shadeColor = GameColors.blockShades[colorIdx];
@@ -158,6 +168,72 @@ class GamePainter extends CustomPainter {
       c = (pts[0] + pts[1] + pts[2]) / 3;
     }
     tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  void _drawBossBlock(Canvas canvas, Layout l, Block b, Rect rect) {
+    final fillPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFFF1744), Color(0xFFD500F9)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(rect);
+
+    final rad = Radius.circular(l.cellW * 0.18);
+    final topRRect = RRect.fromRectAndRadius(rect, rad);
+    canvas.drawRRect(topRRect, fillPaint);
+
+    // Glowing border
+    final glowPaint = Paint()
+      ..color = const Color(0xFFFF4081).withValues(alpha: 0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5 * l.u;
+    canvas.drawRRect(topRRect, glowPaint);
+
+    // HP Text
+    final fs = math.min(l.cellW, l.cellH) * 0.5;
+    final tp = _text('${b.hp}', fs, color: Colors.white, weight: FontWeight.w900);
+    tp.paint(canvas, rect.center - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  void _drawBallTrails(Canvas canvas, Layout l) {
+    if (ballTrail == 'none') return;
+
+    for (final b in engine.balls) {
+      if (b.landed || b.trail.isEmpty) continue;
+
+      for (var i = 0; i < b.trail.length; i++) {
+        final pt = b.trail[i];
+        final frac = 1.0 - (i / b.trail.length);
+        final r = l.r * frac * 0.8;
+
+        Color trailColor;
+        switch (ballTrail) {
+          case 'rainbow':
+            const rainbow = [
+              Color(0xFFFF1744),
+              Color(0xFFFF9100),
+              Color(0xFFFFEA00),
+              Color(0xFF00E676),
+              Color(0xFF00E5FF),
+              Color(0xFFD500F9),
+            ];
+            trailColor = rainbow[i % rainbow.length].withValues(alpha: frac * 0.75);
+            break;
+          case 'fire':
+            trailColor = (i.isEven ? const Color(0xFFFF3D00) : const Color(0xFFFFD600)).withValues(alpha: frac * 0.75);
+            break;
+          case 'cosmic':
+            trailColor = (i.isEven ? const Color(0xFF7C4DFF) : const Color(0xFF00E5FF)).withValues(alpha: frac * 0.75);
+            break;
+          case 'neon':
+          default:
+            trailColor = const Color(0xFF00E5FF).withValues(alpha: frac * 0.75);
+            break;
+        }
+
+        canvas.drawCircle(pt, r, Paint()..color = trailColor);
+      }
+    }
   }
 
   List<Offset> _triPts(Rect r, BlockKind k) {

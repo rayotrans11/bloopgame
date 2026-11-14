@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/ads_service.dart';
 import '../../core/theme.dart';
 import '../../data/player_state.dart';
+import '../../game/models.dart';
 import '../../game/game_screen.dart';
 import 'widgets/game_icons.dart';
 import 'widgets/hud_pills.dart';
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late final Animation<double> _uiFadeAnimation;
   late final Animation<double> _flashAnimation;
   bool _isTransitioning = false;
+  GameMode _selectedMode = GameMode.classic;
 
   @override
   void initState() {
@@ -88,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: GameScreen(
             levelId: widget.player.level,
             player: widget.player,
+            gameMode: _selectedMode,
           ),
         ),
       ),
@@ -172,19 +175,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                             ),
 
+                            const SizedBox(height: 18),
+
+                            // Distinct Mode Selector: CLASSIC | BOSS RUSH | SPEED RUSH
+                            Opacity(
+                              opacity: uiOpacity.clamp(0.0, 1.0),
+                              child: _buildModeSelector(),
+                            ),
+
                             const Spacer(flex: 3),
 
                             // 4. Large 3D START Button
                             Opacity(
                               opacity: uiOpacity.clamp(0.0, 1.0),
                               child: GameButton3D(
-                                text: 'START',
+                                text: _selectedMode == GameMode.bossRush
+                                    ? 'FIGHT BOSS'
+                                    : _selectedMode == GameMode.speedRush
+                                        ? 'RUSH 60s'
+                                        : 'START',
                                 width: 255,
                                 height: 72,
-                                fontSize: 34,
+                                fontSize: 32,
                                 pulsing: !_isTransitioning,
-                                surfaceColor: GameColors.startBlue,
-                                shadowColor: GameColors.startBlueDark,
+                                surfaceColor: _selectedMode == GameMode.bossRush
+                                    ? const Color(0xFFE91E63)
+                                    : _selectedMode == GameMode.speedRush
+                                        ? const Color(0xFFFF6D00)
+                                        : GameColors.startBlue,
+                                shadowColor: _selectedMode == GameMode.bossRush
+                                    ? const Color(0xFFAD1457)
+                                    : _selectedMode == GameMode.speedRush
+                                        ? const Color(0xFFE65100)
+                                        : GameColors.startBlueDark,
                                 onTap: _startGame,
                               ),
                             ),
@@ -194,45 +217,90 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
 
-                      // Floating Side Button: Challenge Trophy only
+                      // Floating Side Button: Achievements & Daily Challenge
                       Positioned(
                         right: 16,
                         bottom: 120,
                         child: Opacity(
                           opacity: uiOpacity.clamp(0.0, 1.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              UnityAdsService.instance.recordMenuClick();
-                              Popups.showFeatureSheet(
-                                context,
-                                'DAILY CHALLENGE',
-                                'trophy',
-                                'Level ${widget.player.level} Challenge!\nPop blocks with perfect precision to earn bonus Gems and exclusive skins!',
-                              );
-                            },
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 52,
-                                  height: 52,
-                                  child: CustomPaint(painter: GameIconPainter(type: 'trophy')),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Achievements Trophy
+                              GestureDetector(
+                                onTap: () {
+                                  UnityAdsService.instance.recordMenuClick();
+                                  Popups.showAchievements(context, widget.player);
+                                },
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 48,
+                                      height: 48,
+                                      child: CustomPaint(painter: GameIconPainter(type: 'trophy')),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Milestones',
+                                      style: TextStyle(
+                                        fontFamily: 'Fredoka',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(color: Colors.black87, offset: Offset(0, 1), blurRadius: 3),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 3),
-                                const Text(
-                                  'Challenge',
-                                  style: TextStyle(
-                                    fontFamily: 'Fredoka',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(color: Colors.black87, offset: Offset(0, 1), blurRadius: 3),
-                                    ],
-                                  ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Challenge Pill
+                              GestureDetector(
+                                onTap: () {
+                                  UnityAdsService.instance.recordMenuClick();
+                                  Popups.showFeatureSheet(
+                                    context,
+                                    'DAILY CHALLENGE',
+                                    'trophy',
+                                    'Level ${widget.player.level} Challenge!\nPop blocks with perfect precision to earn bonus Gems and exclusive skins!',
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF5C4CB2),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFF8A7AE6), width: 1.8),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(Icons.star_rounded, color: Colors.amberAccent, size: 28),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Challenge',
+                                      style: TextStyle(
+                                        fontFamily: 'Fredoka',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(color: Colors.black87, offset: Offset(0, 1), blurRadius: 3),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -251,6 +319,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D0F35).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF4D3BC6), width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _modeTab(GameMode.classic, 'CLASSIC', const Color(0xFF00E5FF)),
+          const SizedBox(width: 2),
+          _modeTab(GameMode.bossRush, 'BOSS', const Color(0xFFFF2D8D)),
+          const SizedBox(width: 2),
+          _modeTab(GameMode.speedRush, 'SPEED 60s', const Color(0xFFFFB300)),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeTab(GameMode mode, String label, Color activeColor) {
+    final isSelected = _selectedMode == mode;
+    return GestureDetector(
+      onTap: () {
+        UnityAdsService.instance.recordMenuClick();
+        setState(() {
+          _selectedMode = mode;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.4),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Fredoka',
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            color: isSelected ? const Color(0xFF0A0C27) : Colors.white70,
+            letterSpacing: 0.3,
           ),
         ),
       ),

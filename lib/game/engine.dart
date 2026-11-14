@@ -13,6 +13,7 @@ class GameEngine {
     required List<Orb> startOrbs,
     required this.baseBalls,
     this.descendEachTurn = true,
+    this.gameMode = GameMode.classic,
     this.onBlockHit,
     this.onBlockDestroyed,
     this.onOrbTriggered,
@@ -27,6 +28,7 @@ class GameEngine {
   Layout layout;
   final int baseBalls;
   final bool descendEachTurn;
+  final GameMode gameMode;
 
   /// Updates layout dynamically during mid-game window resizing or fold/unfold transitions (Apple Duo / iPads)
   void updateLayout(Layout newLayout) {
@@ -58,7 +60,13 @@ class GameEngine {
   int extraBalls = 0;
   int damage = 1;
   int cashEarned = 0;
+  int blocksDestroyedCount = 0;
   bool isFireActive = false;
+
+  // Speed Rush timer and combo state
+  double speedRushTimeRemaining = 60.0;
+  int comboCount = 0;
+  double comboTimer = 0.0;
 
   double launcherX = 0;
   double? firstLandX;
@@ -171,6 +179,21 @@ class GameEngine {
 
   void update(double dt) {
     dt = math.min(dt, 1 / 30);
+
+    // Speed Rush countdown
+    if (gameMode == GameMode.speedRush && phase != Phase.won && phase != Phase.lost) {
+      speedRushTimeRemaining -= dt;
+      if (comboTimer > 0) {
+        comboTimer -= dt;
+        if (comboTimer <= 0) comboCount = 0;
+      }
+      if (speedRushTimeRemaining <= 0) {
+        speedRushTimeRemaining = 0;
+        phase = Phase.won;
+        return;
+      }
+    }
+
     if (phase == Phase.shooting || phase == Phase.recalling) {
       _emit(dt);
       final steps = ((layout.speed * dt) / (layout.r * 0.5)).ceil().clamp(1, 12);
@@ -214,6 +237,13 @@ class GameEngine {
     final r = layout.r;
     for (final b in balls) {
       if (b.landed) continue;
+
+      // Update ball trail history
+      b.trail.insert(0, b.pos);
+      if (b.trail.length > 5) {
+        b.trail.removeLast();
+      }
+
       b.pos += b.vel * h;
 
       // Left wall
@@ -363,14 +393,41 @@ class GameEngine {
     final dmg = amount ?? damage;
     blk.hp -= dmg;
     blk.pulse = 1.0;
+
+    // If it's a multi-block boss, synchronize HP across all boss cells
+    if (blk.isBoss) {
+      for (final other in blocks) {
+        if (other.isBoss && other != blk) {
+          other.hp = blk.hp;
+          other.pulse = 1.0;
+        }
+      }
+    }
+
     onBlockHit?.call();
 
     if (blk.hp <= 0) {
       blk.hp = 0;
       blk.dying = 0.001;
       _grid[blk.row][blk.col] = null;
-      cashEarned += blk.maxHp * 2;
-      _burst(layout.cellCenter(blk.col, blk.row), 12);
+      blocksDestroyedCount++;
+
+      if (blk.isBoss) {
+        for (final other in blocks) {
+          if (other.isBoss) {
+            other.hp = 0;
+            other.dying = 0.001;
+            _grid[other.row][other.col] = null;
+          }
+        }
+      }
+
+      comboCount++;
+      comboTimer = 2.0; // combo window
+      final comboMult = (comboCount > 5) ? 2 : 1;
+      cashEarned += (blk.maxHp * 2 * comboMult);
+
+      _burst(layout.cellCenter(blk.col, blk.row), blk.isBoss ? 30 : 12);
       onBlockDestroyed?.call();
     }
   }
@@ -390,6 +447,23 @@ class GameEngine {
     isFireActive = false;
 
     blocks.removeWhere((b) => !b.alive && b.dying > 1.0);
+
+    // In Speed Rush: if blocks get depleted, dynamically generate a fresh wave!
+    if (gameMode == GameMode.speedRush) {
+      if (blocks.every((b) => !b.alive)) {
+        final rng = math.Random();
+        for (int r = 1; r <= 3; r++) {
+          for (int c = 0; c < 11; c++) {
+            if (rng.nextDouble() < 0.4) {
+              blocks.add(Block(col: c, row: r, hp: 1 + rng.nextInt(5), colorIndex: rng.nextInt(6)));
+            }
+          }
+        }
+        _rebuildGrid();
+      }
+      phase = Phase.idle;
+      return;
+    }
 
     if (blocks.every((b) => !b.alive)) {
       phase = Phase.won;

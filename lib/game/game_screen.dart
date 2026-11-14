@@ -10,13 +10,20 @@ import '../ui/widgets/game_icons.dart';
 import '../ui/widgets/hud_pills.dart';
 import '../ui/widgets/popups.dart';
 import 'engine.dart';
+import 'models.dart';
 import 'painter.dart';
 
 class GameScreen extends StatefulWidget {
   final int levelId;
   final PlayerState player;
+  final GameMode gameMode;
 
-  const GameScreen({super.key, required this.levelId, required this.player});
+  const GameScreen({
+    super.key,
+    required this.levelId,
+    required this.player,
+    this.gameMode = GameMode.classic,
+  });
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -77,19 +84,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       return;
     }
 
-    final levelDef = LevelRepository.getLevel(widget.levelId);
+    final levelDef = widget.gameMode == GameMode.bossRush
+        ? LevelRepository.getBossLevel((widget.levelId % 5) + 1)
+        : widget.gameMode == GameMode.speedRush
+            ? LevelRepository.getSpeedRushLevel(widget.levelId)
+            : LevelRepository.getLevel(widget.levelId);
 
     _engine = GameEngine(
       layout: _layout!,
       startBlocks: levelDef.blocks,
       startOrbs: levelDef.orbs,
       baseBalls: levelDef.balls,
-      descendEachTurn: true,
+      descendEachTurn: widget.gameMode != GameMode.speedRush,
+      gameMode: widget.gameMode,
       onBlockHit: () {
         GameAudio.instance.play(GameSound.blockHit);
         GameAudio.instance.haptic(GameHaptic.light);
       },
       onBlockDestroyed: () {
+        widget.player.recordBlockPopped(1);
         GameAudio.instance.play(GameSound.blockPop);
         GameAudio.instance.haptic(GameHaptic.medium);
       },
@@ -103,6 +116,28 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void _onWin() {
     GameAudio.instance.play(GameSound.win);
     GameAudio.instance.haptic(GameHaptic.success);
+
+    if (widget.gameMode == GameMode.bossRush) {
+      widget.player.recordBossDefeated();
+      const earned = 0.10; // Extra bonus for defeating a Boss Guardian
+      widget.player.addCash(earned);
+      widget.player.addGems(15);
+      Popups.showWin(context, widget.levelId, earned, () {
+        Navigator.of(context).pop();
+      }, player: widget.player);
+      return;
+    }
+
+    if (widget.gameMode == GameMode.speedRush) {
+      final finalScore = _engine?.cashEarned ?? 0;
+      widget.player.recordSpeedRushScore(finalScore);
+      widget.player.addGems(10);
+      Popups.showSpeedRushSummary(context, finalScore, widget.player.speedRushHighScore, () {
+        Navigator.of(context).pop();
+      });
+      return;
+    }
+
     const earned = 0.04;
     widget.player.completeLevel(widget.levelId, earned);
     Popups.showWin(context, widget.levelId, earned, () {
@@ -111,6 +146,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           builder: (_) => GameScreen(
             levelId: widget.levelId + 1,
             player: widget.player,
+            gameMode: widget.gameMode,
           ),
         ),
       );
@@ -127,6 +163,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             builder: (_) => GameScreen(
               levelId: widget.levelId,
               player: widget.player,
+              gameMode: widget.gameMode,
             ),
           ),
         );
@@ -197,6 +234,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       painter: GamePainter(
                         engine: engine,
                         ballSkin: widget.player.ballSkin,
+                        ballTrail: widget.player.ballTrail,
                         repaint: _repaintTick,
                       ),
                     ),
@@ -270,17 +308,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ],
                             ),
 
-                            // Center: LEVEL N Pill
+                            // Center: LEVEL N Pill / Speed Rush Timer / Boss Title
                             Container(
                               height: 44,
                               padding: const EdgeInsets.symmetric(horizontal: 18),
                               decoration: BoxDecoration(
-                                color: GameColors.levelPill,
+                                color: widget.gameMode == GameMode.bossRush
+                                    ? const Color(0xFFC2185B)
+                                    : widget.gameMode == GameMode.speedRush
+                                        ? const Color(0xFFFF6D00)
+                                        : GameColors.levelPill,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: GameColors.levelPillDark,
+                                    color: widget.gameMode == GameMode.bossRush
+                                        ? const Color(0xFF880E4F)
+                                        : widget.gameMode == GameMode.speedRush
+                                            ? const Color(0xFFE65100)
+                                            : GameColors.levelPillDark,
                                     offset: const Offset(0, 3),
                                   ),
                                   BoxShadow(
@@ -292,7 +338,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                               child: Center(
                                 child: Text(
-                                  'LEVEL ${widget.levelId}',
+                                  widget.gameMode == GameMode.bossRush
+                                      ? 'BOSS BATTLE'
+                                      : widget.gameMode == GameMode.speedRush
+                                          ? '${engine.speedRushTimeRemaining.toInt()}s | ${engine.cashEarned} pts'
+                                          : 'LEVEL ${widget.levelId}',
                                   style: const TextStyle(
                                     fontFamily: 'Fredoka',
                                     fontSize: 17,
