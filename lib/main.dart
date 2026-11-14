@@ -95,54 +95,7 @@ class _BloopPopAppState extends State<BloopPopApp> with WidgetsBindingObserver {
         scaffoldBackgroundColor: GameColors.bgDarkPlayfield,
         fontFamily: 'Fredoka',
       ),
-      home: ResponsiveGameContainer(
-        child: HomeScreen(player: _player),
-      ),
-    );
-  }
-}
-
-/// Keeps the exact mobile arcade aspect ratio on desktop, web, or tablets,
-/// while taking full screen on actual phones.
-class ResponsiveGameContainer extends StatelessWidget {
-  final Widget child;
-
-  const ResponsiveGameContainer({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth > 520) {
-          final targetH = constraints.maxHeight;
-          final targetW = (targetH * (9 / 19.5)).clamp(340.0, 480.0);
-          return Container(
-            color: const Color(0xFF090A1E),
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  width: targetW,
-                  height: targetH,
-                  decoration: BoxDecoration(
-                    color: GameColors.bgPlayfield,
-                    border: Border.all(color: GameColors.pillBorder.withValues(alpha: 0.5), width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.8),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: child,
-                ),
-              ),
-            ),
-          );
-        }
-        return child;
-      },
+      home: HomeScreen(player: _player),
     );
   }
 }
