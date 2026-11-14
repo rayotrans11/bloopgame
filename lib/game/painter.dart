@@ -54,10 +54,7 @@ class GamePainter extends CustomPainter {
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
-    // --- 1. Real-Time Descending Target Orbs (Direction 4 + 1) ---
-    _drawTargetOrbs(canvas, l);
-
-    // Legacy blocks (if any left)
+    // Grid blocks
     for (final b in engine.blocks) {
       if (b.hp <= 0 && b.dying > 1.0) continue;
       final rect = l.blockRect(b.col, b.row);
@@ -74,152 +71,36 @@ class GamePainter extends CustomPainter {
       canvas.restore();
     }
 
-    // Grid blocks & Orbs
+    // Orbs
     for (final o in engine.orbs) {
       if (o.consumed) continue;
       _drawOrb(canvas, l, o);
     }
-    _drawFloorLine(canvas, l);
 
-    // Projectile Orbs from Cannon
-    _drawProjectileOrbs(canvas, l);
+    // Floor line
+    _drawFloorLine(canvas, l);
 
     // Aim trajectory line
     if (engine.phase == Phase.aiming) {
       _drawAim(canvas, l);
     }
 
-    // Ball Trails & Classic Balls
+    // Ball Trails
     _drawBallTrails(canvas, l);
+
+    // Balls
     _drawBalls(canvas, l);
 
-    // Cannon Turret (Current and Next loaded color orb)
-    _drawCannonTurret(canvas, l);
-
-    // Lightning bolts & Particle star bursts
+    // Lightning bolts (observed in Level 3!)
     for (final bolt in engine.bolts) {
       _drawBolt(canvas, bolt, l);
     }
+
+    // Particle star bursts and streaks
     _drawParticles(canvas, l);
 
     // Ball counter under floor line
     _drawCounter(canvas, l);
-  }
-
-  void _drawTargetOrbs(Canvas canvas, Layout l) {
-    final rad = l.cellW * 0.42;
-
-    for (final orb in engine.targetOrbs) {
-      if (!orb.alive && orb.dying > 1.0) continue;
-
-      final center = Offset(
-        l.cellCenter(orb.col, 0).dx,
-        l.hudH + (orb.row + 0.5) * l.cellH,
-      );
-
-      var scale = 1.0 - 0.15 * orb.pulse;
-      if (orb.dying > 0) {
-        scale = (1.0 - orb.dying).clamp(0.0, 1.0);
-      }
-
-      canvas.save();
-      canvas.translate(center.dx, center.dy);
-      canvas.scale(scale);
-      canvas.translate(-center.dx, -center.dy);
-
-      _drawSingleBubbleOrb(canvas, center, rad, orb.colorIndex, l, hp: orb.hp, isBoss: orb.isBoss);
-      canvas.restore();
-    }
-  }
-
-  void _drawSingleBubbleOrb(Canvas canvas, Offset c, double rad, int colorIdx, Layout l, {int hp = 1, bool isBoss = false}) {
-    final colors = [
-      [const Color(0xFFFF4081), const Color(0xFFC2185B)], // 0: Pink
-      [const Color(0xFFFF9100), const Color(0xFFE65100)], // 1: Orange
-      [const Color(0xFFFFEA00), const Color(0xFFFFB300)], // 2: Yellow
-      [const Color(0xFF00E676), const Color(0xFF00B0FF)], // 3: Green
-      [const Color(0xFFB388FF), const Color(0xFF7C4DFF)], // 4: Purple
-      [const Color(0xFF00E5FF), const Color(0xFF0091EA)], // 5: Cyan
-    ];
-
-    final pair = (colorIdx >= 0 && colorIdx < colors.length) ? colors[colorIdx] : colors[0];
-
-    // Radial Gradient
-    final shader = RadialGradient(
-      center: const Alignment(-0.35, -0.35),
-      colors: [pair[0], pair[1]],
-    ).createShader(Rect.fromCircle(center: c, radius: rad));
-
-    canvas.drawCircle(c, rad, Paint()..shader = shader);
-
-    // Outer Glow Ring
-    canvas.drawCircle(
-      c,
-      rad,
-      Paint()
-        ..color = isBoss ? const Color(0xFFFF1744) : Colors.white.withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = isBoss ? 3.5 * l.u : 1.8 * l.u,
-    );
-
-    // Specular Highlight
-    canvas.drawCircle(
-      c + Offset(-rad * 0.32, -rad * 0.32),
-      rad * 0.28,
-      Paint()..color = Colors.white.withValues(alpha: 0.75),
-    );
-
-    // HP Number or Boss Crown
-    if (hp > 1 || isBoss) {
-      final fs = rad * 0.85;
-      final tp = _text('$hp', fs, color: Colors.white, weight: FontWeight.w900);
-      tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-    }
-  }
-
-  void _drawProjectileOrbs(Canvas canvas, Layout l) {
-    for (final p in engine.projectileOrbs) {
-      if (!p.active) continue;
-
-      // Projectile Trail
-      for (var i = 0; i < p.trail.length; i++) {
-        final frac = 1.0 - (i / p.trail.length);
-        canvas.drawCircle(
-          p.trail[i],
-          l.r * frac * 0.7,
-          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: frac * 0.6),
-        );
-      }
-
-      // Main Projectile Orb
-      _drawSingleBubbleOrb(canvas, p.pos, l.r * 1.1, p.colorIndex, l);
-    }
-  }
-
-  void _drawCannonTurret(Canvas canvas, Layout l) {
-    final turretBase = Offset(engine.launcherX, l.floorY - l.r);
-
-    // Cannon Base Platform
-    canvas.drawCircle(
-      turretBase + Offset(0, 10 * l.u),
-      22 * l.u,
-      Paint()..color = const Color(0xFF1E216B),
-    );
-    canvas.drawCircle(
-      turretBase + Offset(0, 10 * l.u),
-      22 * l.u,
-      Paint()
-        ..color = const Color(0xFF4D3BC6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5 * l.u,
-    );
-
-    // Next Loaded Orb Chamber (Small preview on left)
-    final nextPos = turretBase + Offset(-32 * l.u, 8 * l.u);
-    _drawSingleBubbleOrb(canvas, nextPos, l.r * 0.8, engine.nextCannonColor, l);
-
-    // Current Loaded Orb in Chamber
-    _drawSingleBubbleOrb(canvas, turretBase, l.r * 1.15, engine.currentCannonColor, l);
   }
 
   void _drawBlock(Canvas canvas, Layout l, Block b, Rect rect) {
@@ -492,9 +373,6 @@ class GamePainter extends CustomPainter {
         break;
       case OrbKind.portalBlue:
       case OrbKind.portalOrange:
-      case OrbKind.rainbow:
-      case OrbKind.bomb:
-      case OrbKind.freeze:
         final isBlue = o.kind == OrbKind.portalBlue;
         final portalColor = isBlue ? const Color(0xFF00E5FF) : const Color(0xFFFF9100);
         // Swirling Portal vortex
