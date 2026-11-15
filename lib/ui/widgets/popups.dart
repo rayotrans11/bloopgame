@@ -1158,6 +1158,293 @@ class Popups {
     );
   }
 
+  static void showProFeatures(BuildContext context, PlayerState player) {
+    showDialog(
+      context: context,
+      builder: (ctx) => ListenableBuilder(
+        listenable: player,
+        builder: (ctx, _) {
+          final isPro = player.vip;
+
+          final proFeatures = [
+            {'title': 'Ai Sensi and Aim', 'desc': 'Smart gyro tracking & predictive targeting curve'},
+            {'title': 'Cross Hair Overlay', 'desc': 'Precision neon reticle aligned with aiming path'},
+            {'title': 'Fire button size', 'desc': 'Custom expandable launch trigger & sensitivity'},
+            {'title': '4 Finger claw layout', 'desc': 'Pro multi-touch tactical controls & placement'},
+            {'title': 'Ping Live', 'desc': 'Ultra low latency real-time ball response display'},
+            {'title': 'Show Hit Markers in drills', 'desc': 'Tactile audio-visual hit feedback on block impact'},
+          ];
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Dialog Container
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0C103C),
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: const Color(0xFFFF2D55), width: 3.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF1744).withValues(alpha: 0.35),
+                        blurRadius: 28,
+                        spreadRadius: 1,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 12),
+
+                      // Red Crown Icon & Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CustomPaint(painter: GameIconPainter(type: 'red_crown')),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isPro ? 'PRO STATUS: ACTIVE' : 'PRO SUITE LOCKED',
+                            style: TextStyle(
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              color: isPro ? const Color(0xFF00E676) : const Color(0xFFFF5252),
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Pro Items List
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: proFeatures.map((feat) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 9),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF070A28),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isPro
+                                        ? const Color(0xFF2E7D32).withValues(alpha: 0.6)
+                                        : const Color(0xFF23285B),
+                                    width: 1.4,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Pro Badge with Red Crown
+                                    Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF261022),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: const Color(0xFFFF2D55).withValues(alpha: 0.6),
+                                          width: 1.2,
+                                        ),
+                                      ),
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CustomPaint(painter: GameIconPainter(type: 'red_crown')),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+
+                                    // Title & Desc
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            feat['title']!,
+                                            style: const TextStyle(
+                                              fontFamily: 'Fredoka',
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            feat['desc']!,
+                                            style: TextStyle(
+                                              fontFamily: 'Fredoka',
+                                              fontSize: 11,
+                                              color: Colors.white.withValues(alpha: 0.6),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+
+                                    // Switch: Disabled & locked if not pro
+                                    IgnorePointer(
+                                      ignoring: !isPro,
+                                      child: Opacity(
+                                        opacity: isPro ? 1.0 : 0.45,
+                                        child: Switch(
+                                          value: isPro,
+                                          onChanged: isPro ? (_) {} : null,
+                                          activeColor: const Color(0xFFFF2D55),
+                                          inactiveThumbColor: Colors.white38,
+                                          inactiveTrackColor: Colors.white10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Unlock Button / Active Status
+                      if (!isPro)
+                        GameButton3D(
+                          text: 'ACTIVATE PRO',
+                          width: 220,
+                          height: 52,
+                          fontSize: 20,
+                          surfaceColor: const Color(0xFFFF1744),
+                          shadowColor: const Color(0xFFB71C1C),
+                          onTap: () {
+                            // Activate VIP
+                            player.vip = true;
+                            player.save();
+                            GameAudio.instance.play(GameSound.win);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('🎉 PRO Features Activated!'),
+                                backgroundColor: Color(0xFF2E7D32),
+                              ),
+                            );
+                          },
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1B5E20),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, color: Color(0xFF00E676), size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'ALL PRO FEATURES UNLOCKED',
+                                style: TextStyle(
+                                  fontFamily: 'Fredoka',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Top Floating Pill Title
+                Positioned(
+                  top: -18,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 7),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF1744), Color(0xFF880E4F)],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFFF80AB), width: 2.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            offset: const Offset(0, 4),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CustomPaint(painter: GameIconPainter(type: 'red_crown')),
+                          ),
+                          const SizedBox(width: 8),
+                          const OutlinedButtonText('PRO FEATURES', fontSize: 17, strokeWidth: 3.8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Close Button
+                Positioned(
+                  top: -10,
+                  right: -6,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(ctx).pop(),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF2D55),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            offset: const Offset(0, 3),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.close, color: Colors.white, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   static void showFeatureSheet(BuildContext context, String title, String iconType, String description) {
     showDialog(
       context: context,

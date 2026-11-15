@@ -470,6 +470,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ),
 
+        // Compact "Get Pro" Button with Red Crown Icon
+        GetProButton(
+          isPro: widget.player.vip,
+          onTap: () {
+            UnityAdsService.instance.recordMenuClick();
+            Popups.showProFeatures(context, widget.player);
+          },
+        ),
+
         // Settings and Skin action buttons
         Row(
           mainAxisSize: MainAxisSize.min,

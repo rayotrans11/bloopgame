@@ -576,3 +576,131 @@ class _GameButton3DState extends State<GameButton3D> with SingleTickerProviderSt
     return btn;
   }
 }
+
+/// Compact "Get Pro" Button with Red Crown Icon & outline sized closely to text
+class GetProButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isPro;
+
+  const GetProButton({
+    super.key,
+    required this.onTap,
+    this.isPro = false,
+  });
+
+  @override
+  State<GetProButton> createState() => _GetProButtonState();
+}
+
+class _GetProButtonState extends State<GetProButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  bool _pressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseCtrl,
+      builder: (context, child) {
+        final glow = _pulseCtrl.value;
+        return GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 70),
+            transform: Matrix4.translationValues(0, _pressed ? 1.5 : 0, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF26123D),
+                  Color(0xFF140824),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: Color.lerp(
+                  const Color(0xFFFF2D55),
+                  const Color(0xFFFF6D00),
+                  glow,
+                )!,
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF1744).withValues(alpha: 0.25 + 0.25 * glow),
+                  blurRadius: 6 + 4 * glow,
+                  spreadRadius: 0.5,
+                  offset: const Offset(0, 1.5),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  offset: const Offset(0, 2),
+                  blurRadius: 3,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Red Crown Icon
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CustomPaint(
+                    painter: GameIconPainter(type: 'red_crown'),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                // Text sized tightly
+                Text(
+                  widget.isPro ? 'PRO ACTIVE' : 'Get Pro',
+                  style: const TextStyle(
+                    fontFamily: 'Fredoka',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFFE082),
+                    letterSpacing: 0.4,
+                    shadows: [
+                      Shadow(
+                        color: Color(0xFFFF1744),
+                        offset: Offset(0, 1),
+                        blurRadius: 3,
+                      ),
+                      Shadow(
+                        color: Colors.black87,
+                        offset: Offset(0, 1.5),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

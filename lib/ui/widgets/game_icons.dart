@@ -49,6 +49,9 @@ class GameIconPainter extends CustomPainter {
       case 'skin_swirl':
         _drawSkinSwirl(canvas);
         break;
+      case 'red_crown':
+        _drawRedCrown(canvas);
+        break;
       case 'pu_smash':
         _drawPuSmash(canvas);
         break;
@@ -449,6 +452,81 @@ class GameIconPainter extends CustomPainter {
 
     // White shine dot
     canvas.drawCircle(const Offset(40, 40), 6, Paint()..color = Colors.white.withValues(alpha: 0.85));
+  }
+
+  void _drawRedCrown(Canvas canvas) {
+    // Red 3-peak Royal Crown
+    final crownPath = Path()
+      ..moveTo(20, 72)
+      ..lineTo(80, 72)
+      ..lineTo(86, 38)
+      ..lineTo(64, 52)
+      ..lineTo(50, 24)
+      ..lineTo(36, 52)
+      ..lineTo(14, 38)
+      ..close();
+
+    // Red gradient
+    final redShader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFFF334B), Color(0xFFD5001C), Color(0xFF8B0010)],
+    ).createShader(const Rect.fromLTWH(14, 24, 72, 48));
+
+    // Outer dark stroke for cartoon style
+    canvas.drawPath(
+      crownPath,
+      Paint()
+        ..color = const Color(0xFF3E0007)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.5
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Red Body
+    canvas.drawPath(crownPath, Paint()..shader = redShader);
+
+    // Golden base band
+    final baseRect = RRect.fromRectAndRadius(const Rect.fromLTWH(18, 67, 64, 8), const Radius.circular(3));
+    canvas.drawRRect(
+      baseRect,
+      Paint()
+        ..color = const Color(0xFFFFD700)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRRect(
+      baseRect,
+      Paint()
+        ..color = const Color(0xFF4A3500)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Jewels on crown peaks (left, center, right)
+    final jewelPaint = Paint()..color = const Color(0xFFFFEB3B);
+    final jewelBorder = Paint()
+      ..color = const Color(0xFF3E0007)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+
+    // Center peak jewel (diamond / circle)
+    canvas.drawCircle(const Offset(50, 23), 5.5, jewelPaint);
+    canvas.drawCircle(const Offset(50, 23), 5.5, jewelBorder);
+    // Left peak jewel
+    canvas.drawCircle(const Offset(15, 37), 4.5, jewelPaint);
+    canvas.drawCircle(const Offset(15, 37), 4.5, jewelBorder);
+    // Right peak jewel
+    canvas.drawCircle(const Offset(85, 37), 4.5, jewelPaint);
+    canvas.drawCircle(const Offset(85, 37), 4.5, jewelBorder);
+
+    // Specular highlight on crown face
+    final highlightPath = Path()
+      ..moveTo(48, 35)
+      ..lineTo(44, 52)
+      ..lineTo(38, 52)
+      ..lineTo(30, 44)
+      ..close();
+    canvas.drawPath(highlightPath, Paint()..color = Colors.white.withValues(alpha: 0.35));
   }
 
   // 1. Smash: Yellow block breaking with down arrow
