@@ -1306,7 +1306,7 @@ class Popups {
                                         child: Switch(
                                           value: isPro,
                                           onChanged: isPro ? (_) {} : null,
-                                          activeColor: const Color(0xFFFF2D55),
+                                          activeThumbColor: const Color(0xFFFF2D55),
                                           inactiveThumbColor: Colors.white38,
                                           inactiveTrackColor: Colors.white10,
                                         ),
