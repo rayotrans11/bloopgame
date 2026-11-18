@@ -3,7 +3,7 @@ import '../../core/ads_service.dart';
 import '../../core/theme.dart';
 import '../../data/player_state.dart';
 import '../../game/models.dart';
-import '../../game/game_screen.dart';
+import '../../game/fusion_game_screen.dart';
 import 'widgets/game_icons.dart';
 import 'widgets/hud_pills.dart';
 import 'widgets/logo.dart';
@@ -81,16 +81,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     if (!mounted) return;
 
-    // Fast seamless push to GameScreen
+    // Fast seamless push to FusionGameScreen
     await Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 140),
         pageBuilder: (context, animation, secondaryAnimation) => FadeTransition(
           opacity: animation,
-          child: GameScreen(
+          child: FusionGameScreen(
             levelId: widget.player.level,
             player: widget.player,
-            gameMode: _selectedMode,
           ),
         ),
       ),
