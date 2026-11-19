@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/ads_service.dart';
 import 'core/game_audio.dart';
+import 'core/progression_service.dart';
 import 'core/theme.dart';
 import 'data/player_state.dart';
 import 'ui/home_screen.dart';
@@ -47,6 +48,7 @@ class _BloopPopAppState extends State<BloopPopApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _player.addListener(_syncAudioSettings);
     unawaited(_initializeAudio());
+    unawaited(ProgressionService.instance.init());
     // Prompt ATT when app opens on iOS, then initialize Unity Ads legally
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UnityAdsService.instance.init();

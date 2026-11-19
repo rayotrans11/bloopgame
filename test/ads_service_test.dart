@@ -28,6 +28,12 @@ void main() {
       },
     );
     expect(rewarded, isTrue);
+
+    // Verify level completion ad trigger every 2 levels
+    expect(ads.recordLevelComplete(), isFalse); // 1st level -> false
+    expect(ads.recordLevelComplete(), isTrue);  // 2nd level -> true
+    expect(ads.recordLevelComplete(), isFalse); // 3rd level -> false
+    expect(ads.recordLevelComplete(), isTrue);  // 4th level -> true
   });
 }
 

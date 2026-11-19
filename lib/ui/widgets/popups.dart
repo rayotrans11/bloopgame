@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/ads_service.dart';
 import '../../core/format.dart';
+import '../../core/progression_service.dart';
 import '../../core/theme.dart';
 import '../../core/game_audio.dart';
 import '../../data/player_state.dart';
@@ -1100,6 +1101,29 @@ class Popups {
                   if (player.haptics) {
                     GameAudio.instance.haptic(GameHaptic.selection);
                   }
+                },
+              ),
+              // Colorblind Mode Toggle (Section 2.2)
+              ListenableBuilder(
+                listenable: ProgressionService.instance,
+                builder: (context, _) {
+                  final prog = ProgressionService.instance;
+                  return SwitchListTile(
+                    title: const Row(
+                      children: [
+                        Icon(Icons.visibility_rounded, color: Color(0xFFFFD600), size: 20),
+                        SizedBox(width: 8),
+                        Text('Colorblind Symbols', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    subtitle: const Text('Adds shapes to blocks for easy identification', style: TextStyle(fontFamily: 'Fredoka', color: Colors.white60, fontSize: 11)),
+                    value: prog.colorblindMode,
+                    activeThumbColor: const Color(0xFFFFD600),
+                    onChanged: (_) {
+                      prog.toggleColorblindMode();
+                      GameAudio.instance.play(GameSound.uiTap);
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 8),

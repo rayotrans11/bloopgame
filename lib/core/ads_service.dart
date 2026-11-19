@@ -37,6 +37,17 @@ class UnityAdsService {
   int _menuClickCount = 0;
   static const int clicksPerInterstitial = 6;
 
+  // Level completed counter: after every 2 levels completed, show interstitial on Next Level
+  int _completedLevelsCount = 0;
+  int get completedLevelsCount => _completedLevelsCount;
+
+  /// Increments completed levels count. Returns true if an interstitial ad should be shown.
+  bool recordLevelComplete() {
+    _completedLevelsCount++;
+    debugPrint('[UnityAds] Level complete recorded: $_completedLevelsCount');
+    return _completedLevelsCount % 2 == 0;
+  }
+
   /// Check if running on iOS / Android supported mobile platform
   bool get isMobilePlatform => !kIsWeb && (Platform.isIOS || Platform.isAndroid);
 

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../core/ads_service.dart';
+import '../../core/progression_service.dart';
 import '../../core/theme.dart';
 import '../../data/player_state.dart';
 import '../../game/models.dart';
 import '../../game/fusion_game_screen.dart';
+import 'level_map_screen.dart';
+import 'widgets/cosmetic_shop_modal.dart';
+import 'widgets/daily_reward_modal.dart';
 import 'widgets/game_icons.dart';
 import 'widgets/hud_pills.dart';
 import 'widgets/logo.dart';
@@ -54,6 +58,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _flashAnimation = Tween<double>(begin: 0.0, end: 0.45).animate(
       CurvedAnimation(parent: _transitionCtrl, curve: Curves.easeInOut),
     );
+
+    // Auto prompt daily login reward if available (Section 1.3)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDailyLoginReward();
+    });
+  }
+
+  void _checkDailyLoginReward() {
+    // Only auto-trigger if there's already a streak started and ready
+    if (!mounted) return;
+    final prog = ProgressionService.instance;
+    if (prog.dailyReward.streakDay > 0 && prog.canClaimDailyReward()) {
+      final rewardGems = prog.claimDailyReward();
+      if (rewardGems > 0 && mounted) {
+        DailyRewardModal.show(context, rewardGems, () {
+          widget.player.addGems(rewardGems);
+          Navigator.of(context).pop();
+        });
+      }
+    }
   }
 
   @override
@@ -184,30 +208,69 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                             const Spacer(flex: 3),
 
-                            // 4. Large 3D START Button
+                            // 4. Large 3D START Button & LEVEL MAP Button
                             Opacity(
                               opacity: uiOpacity.clamp(0.0, 1.0),
-                              child: GameButton3D(
-                                text: _selectedMode == GameMode.bossRush
-                                    ? 'FIGHT BOSS'
-                                    : _selectedMode == GameMode.speedRush
-                                        ? 'RUSH 60s'
-                                        : 'START',
-                                width: 255,
-                                height: 72,
-                                fontSize: 32,
-                                pulsing: !_isTransitioning,
-                                surfaceColor: _selectedMode == GameMode.bossRush
-                                    ? const Color(0xFFE91E63)
-                                    : _selectedMode == GameMode.speedRush
-                                        ? const Color(0xFFFF6D00)
-                                        : GameColors.startBlue,
-                                shadowColor: _selectedMode == GameMode.bossRush
-                                    ? const Color(0xFFAD1457)
-                                    : _selectedMode == GameMode.speedRush
-                                        ? const Color(0xFFE65100)
-                                        : GameColors.startBlueDark,
-                                onTap: _startGame,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GameButton3D(
+                                    text: 'START',
+                                    width: 255,
+                                    height: 68,
+                                    fontSize: 30,
+                                    pulsing: !_isTransitioning,
+                                    surfaceColor: GameColors.startBlue,
+                                    shadowColor: GameColors.startBlueDark,
+                                    onTap: _startGame,
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Level Map Path Button (Section 1.1)
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => LevelMapScreen(player: widget.player),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF5C4CB2), Color(0xFF33276B)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: const Color(0xFF8A7AE6), width: 1.8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.35),
+                                            offset: const Offset(0, 3),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.map_rounded, color: Color(0xFFFFD600), size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'LEVEL MAP (${ProgressionService.instance.totalStars} ⭐)',
+                                            style: const TextStyle(
+                                              fontFamily: 'Fredoka',
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -469,15 +532,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ),
 
-        // Compact "Get Pro" Button with Red Crown Icon
-        GetProButton(
-          isPro: widget.player.vip,
-          onTap: () {
-            UnityAdsService.instance.recordMenuClick();
-            Popups.showProFeatures(context, widget.player);
-          },
-        ),
-
         // Settings and Skin action buttons
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -525,11 +579,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(width: 8),
 
-            // Skin Button
+            // Skin / Gem Shop Button (Section 1.5)
             GestureDetector(
               onTap: () {
                 UnityAdsService.instance.recordMenuClick();
-                Popups.showSkins(context, widget.player);
+                CosmeticShopModal.show(context, widget.player);
               },
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -550,11 +604,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ],
                     ),
-                    child: CustomPaint(painter: GameIconPainter(type: 'skin_swirl')),
+                    child: const Center(
+                      child: Icon(Icons.storefront_rounded, color: Color(0xFFFFD600), size: 22),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    'Skin',
+                    'Shop',
                     style: TextStyle(
                       fontFamily: 'Fredoka',
                       fontSize: 10,
